@@ -35,7 +35,7 @@ FRAMESIZE_VGA (640 x 480)
 FRAMESIZE_SVGA (800 x 600)
 FRAMESIZE_XGA (1024 x 768)
 FRAMESIZE_SXGA (1280 x 1024)*/
-void cameraInit(pixformat_t pixel_format = PIXFORMAT_JPEG, framesize_t frame_size = FRAMESIZE_SVGA) {
+void cameraInit() {
      // esp_camera_deinit();
 
     // Инициализация камеры
@@ -54,17 +54,17 @@ void cameraInit(pixformat_t pixel_format = PIXFORMAT_JPEG, framesize_t frame_siz
     config.pin_pclk = PCLK_GPIO_NUM;
     config.pin_vsync = VSYNC_GPIO_NUM;
     config.pin_href = HREF_GPIO_NUM;
-    config.pin_sscb_sda = SIOD_GPIO_NUM;
-    config.pin_sscb_scl = SIOC_GPIO_NUM;
+    config.pin_sccb_sda = SIOD_GPIO_NUM;
+    config.pin_sccb_scl = SIOC_GPIO_NUM;
     config.pin_pwdn = PWDN_GPIO_NUM;
     config.pin_reset = RESET_GPIO_NUM;
     config.xclk_freq_hz = 20000000;
-    config.pixel_format = pixel_format;
+    config.pixel_format = PIXFORMAT_JPEG;
     //config.pixel_format = PIXFORMAT_JPEG;
     //config.pixel_format = PIXFORMAT_RGB565; 
 
      
-        config.frame_size = frame_size; // 640x480
+        config.frame_size = FRAMESIZE_SVGA; // 640x480
        // config.frame_size = frame_size; // 640x480
         config.jpeg_quality = 12;
         config.fb_count = 1;

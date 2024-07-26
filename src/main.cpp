@@ -241,6 +241,10 @@ void handleSettingsSave(){
     preferences.putString("led_b", led_b);
     preferences.putString("camera_width", camera_width);
     preferences.putString("camera_height", camera_height);
+ 
+    mqtt_server.trim();
+    mqtt_user.trim();
+    mqtt_password.trim();
 
     preferences.putString("mqtt_server", mqtt_server);
     preferences.putInt("mqtt_port", mqtt_port.toInt());

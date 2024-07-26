@@ -1,6 +1,7 @@
 #pragma once
 
 void mqttStateLed(const String& state, int led_r, int led_g, int led_b) ;
+void mqttTemperature(const String& state);
 
 #include <WiFi.h>
 #include <PubSubClient.h>
@@ -140,16 +141,28 @@ void mqttReconnect() {
 void mqttInit() {
      Serial.println("mqttInit");
 
-    preferences.begin("settings", false);
+    preferences.begin("settings", false);    
     String mqtt_server = preferences.getString("mqtt_server", "");
     int mqtt_port = preferences.getInt("mqtt_port", 1883);
     preferences.end();
+ 
+    if (!mqtt_server.isEmpty()) {
+        Serial.println("mqttClient setserver"); 
+        Serial.println(mqtt_server.c_str());
+        Serial.println(mqtt_port);
 
-    if ( mqtt_server != "") {
-         Serial.println("mqttClient setserver"); 
-         Serial.println(mqtt_server.c_str());
-         Serial.println(mqtt_port);
-        mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
+        IPAddress mqtt_ip;
+        mqtt_ip.fromString(mqtt_server);
+        Serial.println(mqtt_ip);
+
+        if (!mqtt_ip.fromString(mqtt_server)) {
+            Serial.println("Invalid IP address format");
+            mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
+        } else{
+            mqttClient.setServer(mqtt_ip, mqtt_port);
+        }
+
+       
         mqttClient.setCallback(mqttCallback);
     }else{
         isMqttDisabled=true;
@@ -189,3 +202,13 @@ void mqttStateLed(const String& state, int led_r, int led_g, int led_b) {
     // Публикуем сообщение в формате JSON
     mqttClient.publish("esp32/led/state", buffer);
 }
+
+
+//Функции установки состояний
+
+void mqttTemperature(const String& state) {
+    if (isMqttDisabled) return;
+    if (!isMqttConnected) return;
+     
+    mqttClient.publish("esp32/temperature/status", state.c_str());
+} 

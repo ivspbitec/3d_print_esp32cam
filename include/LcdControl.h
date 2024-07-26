@@ -19,6 +19,7 @@ int isLCD=0;
 // библиотеки для работы с OLED экраном Arduino IDE
 #include "Wire.h"
 #include "Adafruit_SSD1306.h"
+#include "MQTTControl.h"
 
 Adafruit_SSD1306 display(128, 32, &Wire, -1); // указываем размер экрана в пикселях
 
@@ -72,7 +73,9 @@ void updateDisplay() {
         
         float temperature = (float)temperatureRead() ;
         globalData.temperature = temperature; 
-          
+           
+
+        mqttTemperature(String(temperature));
 
         // Обновляем дисплей
         //lcdPrint("Wifi Connected. SSID: %s, IP: %s, RSSI: %d dBm, t: %.2f °C\nMQTT Command: %s",
