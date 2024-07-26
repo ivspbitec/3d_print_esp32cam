@@ -46,9 +46,7 @@ IPAddress apIP(192, 168, 4, 1);
 
 int isWifiConnect=0;
 //int isScreenCapture=0;
-
-
-
+ 
 
 
 void handleStream();
