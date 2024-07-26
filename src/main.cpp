@@ -302,7 +302,8 @@ void setup() {
             
             server.begin(); 
 
-             lcdPrint("MQTT Init");
+             lcdPrint("MQTT Init");             
+             Serial.println("MQTT Init");
              mqttInit();
         }
 

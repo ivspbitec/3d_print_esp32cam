@@ -97,11 +97,10 @@ void mqttReconnect() {
     String mqtt_password = preferences.getString("mqtt_password", "");
     preferences.end();
 
-            mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
-        mqttClient.setCallback(mqttCallback);
+
 
     if ( mqtt_server == "")  return;
-      Serial.println('mqttReconnect');
+      Serial.println("mqttReconnect");
      Serial.println(mqtt_server);
      Serial.println(mqtt_port);
      Serial.println(mqtt_user);
@@ -139,15 +138,15 @@ void mqttReconnect() {
 
 // Функция инициализации MQTT
 void mqttInit() {
-     Serial.println('mqttInit');
-     preferences.begin("settings", false);
+     Serial.println("mqttInit");
 
+    preferences.begin("settings", false);
     String mqtt_server = preferences.getString("mqtt_server", "");
     int mqtt_port = preferences.getInt("mqtt_port", 1883);
     preferences.end();
 
     if ( mqtt_server != "") {
-         Serial.println('mqttClient setserver'); 
+         Serial.println("mqttClient setserver"); 
          Serial.println(mqtt_server.c_str());
          Serial.println(mqtt_port);
         mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
@@ -156,6 +155,7 @@ void mqttInit() {
         isMqttDisabled=true;
     }
 } 
+
 
 // Функция для обработки MQTT сообщений
 void mqttLoop() {

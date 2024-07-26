@@ -28,7 +28,14 @@
 #define PCLK_GPIO_NUM    22
 #endif
 
-void cameraInit(pixformat_t pixel_format = PIXFORMAT_JPEG, framesize_t frame_size = FRAMESIZE_VGA) {
+/*FRAMESIZE_UXGA (1600 x 1200)
+FRAMESIZE_QVGA (320 x 240)
+FRAMESIZE_CIF (352 x 288)
+FRAMESIZE_VGA (640 x 480)
+FRAMESIZE_SVGA (800 x 600)
+FRAMESIZE_XGA (1024 x 768)
+FRAMESIZE_SXGA (1280 x 1024)*/
+void cameraInit(pixformat_t pixel_format = PIXFORMAT_JPEG, framesize_t frame_size = FRAMESIZE_SVGA) {
      // esp_camera_deinit();
 
     // Инициализация камеры
