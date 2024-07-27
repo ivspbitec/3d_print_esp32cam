@@ -26,6 +26,7 @@ void LedOn() {
     int led_r = preferences.getString("led_r", "255").toInt();
     int led_g = preferences.getString("led_g", "255").toInt();
     int led_b = preferences.getString("led_b", "255").toInt();
+    int brightness = preferences.getString("brightness", "255").toInt();
     preferences.end();    
 
     
@@ -53,3 +54,14 @@ bool getLedState(){
 }
 
  
+ void applyBrightness(int brightness) {
+    strip.setBrightness(brightness);
+    strip.show();
+}
+
+void setLedColor(int r, int g, int b) {
+      for(int i = 0; i < strip.numPixels(); i++) { 
+        strip.setPixelColor(i, strip.Color(r, g, b));
+    }
+    strip.show();
+}

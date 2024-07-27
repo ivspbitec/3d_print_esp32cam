@@ -79,6 +79,16 @@ void cameraInit() {
         return;
     }
 
+  sensor_t *s = esp_camera_sensor_get();
+    if (s == NULL) {
+        Serial.println("Failed to get camera sensor settings");
+        return;
+    }
+
+    // Переворот изображения по вертикали
+    s->set_vflip(s, 1); // 1 для включения переворота, 0 для отключения
+
+
     Serial.println("Camera reinitialized successfully");
   
 }

@@ -20,7 +20,6 @@ extern DisplayData globalData;
     int  mqttTryes=5;
  
  
-
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
     if (isMqttDisabled) return;
 
@@ -37,52 +36,46 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
  
     lcdPrint("MQTT: %s", message.c_str());
 
-    if (String(topic) == "esp32/led/set") {
-        // Создаем JSON документ
-        JsonDocument doc;
-        DeserializationError error = deserializeJson(doc, message);
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, message);
 
-        if (error) {
-            Serial.print("deserializeJson() failed: ");
-            Serial.println(error.c_str());
-            return;
+    if (error) {
+        Serial.print("deserializeJson() failed: ");
+        Serial.println(error.c_str());
+        return;
+    }
+
+    String topicStr = String(topic);
+
+    if (topicStr == "esp32/led/switch") {
+        String state = doc.as<String>();
+        if (state == "ON") {
+            LedOn(); // Функция для включения ленты
+        } else if (state == "OFF") {
+            LedOff(); // Функция для выключения ленты
         }
+    } else if (topicStr == "esp32/led/brightness/set") {
+        int brightness = doc.as<int>();
+        // Сохраните значение яркости в ваших настройках или примените его напрямую
+        preferences.begin("settings", false);
+        preferences.putInt("brightness", brightness);
+        preferences.end();
+        applyBrightness(brightness);
+    } else if (topicStr == "esp32/led/rgb/set") {
+        JsonArray rgb = doc.as<JsonArray>();
+        int r = rgb[0];
+        int g = rgb[1];
+        int b = rgb[2];
+        // Сохраните значения цвета в ваших настройках или примените их напрямую
+        preferences.begin("settings", false);
+        preferences.putInt("led_r", r);
+        preferences.putInt("led_g", g);
+        preferences.putInt("led_b", b);
+        preferences.end();
+        setLedColor(r, g, b);
 
-        // Проверяем состояние
-        if (doc.containsKey("state")) {
-            String state = doc["state"].as<String>();
-
-            if (state == "ON") {
-                LedOn(); // Функция для включения ленты
-            } else if (state == "OFF") {                 
-                LedOff(); // Функция для выключения ленты
-            }
-        }
-
-        // Проверяем цвет
-        if (doc.containsKey("color")) {
-            JsonObject color = doc["color"].as<JsonObject>();
-
-            preferences.begin("settings", true);
-             
-            if (color.containsKey("r")) {
-                String led_r = color["r"].as<String>(); // Извлекаем значение красного
-                preferences.putString("led_r", String(led_r)); // Сохраняем в Preferences
-            }
-            if (color.containsKey("g")) {
-                String led_g = color["g"].as<String>(); // Извлекаем значение зеленого
-                preferences.putString("led_g", String(led_g)); // Сохраняем в Preferences
-            }
-            if (color.containsKey("b")) {
-                String led_b = color["b"].as<String>(); // Извлекаем значение синего
-                preferences.putString("led_b", String(led_b)); // Сохраняем в Preferences
-            }
-
-            preferences.end();    
- 
-            if (getLedState()) {
-                LedOn(); 
-            }
+        if (getLedState()) {
+            LedOn(); 
         }
     }
 }
@@ -118,7 +111,9 @@ void mqttReconnect() {
             lcdPrint("MQTT Connected");
  
 
-            mqttClient.subscribe("esp32/led/set");
+            mqttClient.subscribe("esp32/led/switch");
+            mqttClient.subscribe("esp32/led/rgb/set");
+            mqttClient.subscribe("esp32/led/brightness/set");
  
          } else {
             Serial.print("failed, rc=");

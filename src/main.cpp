@@ -187,6 +187,7 @@ void handleSettings(){
     String led_r = preferences.getString("led_r", "255");
     String led_g = preferences.getString("led_g", "255");
     String led_b = preferences.getString("led_b", "255");
+    String brightness = preferences.getString("brightness", "255");
 
     String camera_width = preferences.getString("camera_width", "");
     String camera_height = preferences.getString("camera_height", "");
@@ -204,6 +205,8 @@ void handleSettings(){
     "<label>R: <input name='led_r' value='"+led_r+"'></label><br>"
     "<label>G: <input name='led_g' value='"+led_g+"'></label><br>"
     "<label>B: <input name='led_b' value='"+led_b+"'></label><br><br>"
+    
+    "<label>B: <input name='brightness' value='"+brightness+"'></label><br><br>"
    
     "<h2>Camera</h2><br>"
     "<label>Width: <input name='led_g' value='"+camera_width+"'></label><br>"
@@ -226,6 +229,7 @@ void handleSettingsSave(){
     String led_r = server.arg("led_r");
     String led_g = server.arg("led_g");
     String led_b = server.arg("led_b");
+    String brightness = server.arg("brightness");
 
     String camera_height = server.arg("camera_height");
     String camera_width = server.arg("camera_width");
@@ -239,6 +243,7 @@ void handleSettingsSave(){
     preferences.putString("led_r", led_r);
     preferences.putString("led_g", led_g);
     preferences.putString("led_b", led_b);
+    preferences.putString("brightness", brightness);
     preferences.putString("camera_width", camera_width);
     preferences.putString("camera_height", camera_height);
  
