@@ -64,9 +64,10 @@ void cameraInit() {
     //config.pixel_format = PIXFORMAT_RGB565; 
 
      
-        config.frame_size = FRAMESIZE_SVGA; // 640x480
+        //config.frame_size = FRAMESIZE_SVGA; // 640x480
+        config.frame_size = FRAMESIZE_VGA; // 640x480
        // config.frame_size = frame_size; // 640x480
-        config.jpeg_quality = 12;
+        config.jpeg_quality = 6;
         config.fb_count = 1;
     
 
@@ -87,7 +88,8 @@ void cameraInit() {
 
     // Переворот изображения по вертикали
     s->set_vflip(s, 1); // 1 для включения переворота, 0 для отключения
-
+    s->set_hmirror(s,1);
+    
 
     Serial.println("Camera reinitialized successfully");
   
