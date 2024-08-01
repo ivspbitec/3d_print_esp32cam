@@ -4,7 +4,8 @@
 #include "esp_system.h"
 #include <ArduinoJson.h>
 
-struct DisplayData {
+struct DisplayData
+{
     String ssid;
     String ip;
     int rssi;
@@ -27,8 +28,8 @@ DisplayData globalData; // Глобальная переменная для хр
 #define DispSclPin 13
 #include "LcdControl.h"
 
-const char* apSSID = "ESP_32CM";
-const char* apPassword = "987654321S";
+const char *apSSID = "ESP_32CM";
+const char *apPassword = "987654321S";
 
 WebServer server(8080);
 WebServer serverSettings(80);
@@ -51,11 +52,13 @@ void handleLEDOff();
 bool wifiConnect(String ssid, String password);
 void wifiAP();
 
-void handleRoot() {
+void handleRoot()
+{
     serverSettings.send(200, "text/html", "<form method='POST' action='/save'><label>SSID: <input name='ssid'></label><br><label>Password: <input name='password'></label><br><input type='submit'></form>");
 }
 
-void handleSave() {
+void handleSave()
+{
     String ssid = serverSettings.arg("ssid");
     String password = serverSettings.arg("password");
 
@@ -88,12 +91,14 @@ void handleSave() {
     ESP.restart();
 }
 
-void handleNotFound() {
+void handleNotFound()
+{
     serverSettings.sendHeader("Location", "/", true); // Перенаправление на главную страницу
     serverSettings.send(302, "text/plain", "");
 }
 
-bool wifiConnect(String ssid, String password) {
+bool wifiConnect(String ssid, String password)
+{
     // Подключение к сохраненной сети Wi-Fi
     isWifiConnect = 0;
     WiFi.mode(WIFI_STA);
@@ -103,7 +108,6 @@ bool wifiConnect(String ssid, String password) {
     unsigned long startTime = millis();
 
     while (WiFi.status() != WL_CONNECTED)
-
 
     {
         delay(1000);
@@ -120,7 +124,8 @@ bool wifiConnect(String ssid, String password) {
         }
     }
 
-    if (WiFi.status() == WL_CONNECTED) {
+    if (WiFi.status() == WL_CONNECTED)
+    {
         Serial.println("Connected to saved WiFi");
         Serial.print("IP address: ");
         Serial.println(WiFi.localIP());
@@ -138,7 +143,8 @@ bool wifiConnect(String ssid, String password) {
     return false;
 }
 
-void wifiAP() {
+void wifiAP()
+{
     // WiFi.softAPdisconnect(true);
     // WiFi.disconnect();
 
@@ -153,7 +159,8 @@ void wifiAP() {
     lcdPrint("Access Point SSID: %s, Password: %s, IP: %s", apSSID, apPassword, apIP.toString().c_str());
 }
 
-void wifiInit() {
+void wifiInit()
+{
 
     // Проверка сохраненных настроек Wi-Fi
     preferences.begin("wifi-config", true);
@@ -171,7 +178,8 @@ void wifiInit() {
     }
 }
 
-void handleReset() {
+void handleReset()
+{
     preferences.begin("wifi-config", false);
     preferences.clear();
     preferences.end();
@@ -180,7 +188,8 @@ void handleReset() {
     preferences.end();
 }
 
-void handleSettings() {
+void handleSettings()
+{
 
     preferences.begin("settings", true);
     String led_r = preferences.getString("led_r", "255");
@@ -200,38 +209,39 @@ void handleSettings() {
     // esp32cam
     // esP365
     server.send(200, "text/html", "<form method='POST' action='/save'>"
-        "<h2>Led</h2><br>"
-        "<label>R: <input name='led_r' value='" +
-        led_r + "'></label><br>"
-        "<label>G: <input name='led_g' value='" +
-        led_g + "'></label><br>"
-        "<label>B: <input name='led_b' value='" +
-        led_b + "'></label><br><br>"
+                                  "<h2>Led</h2><br>"
+                                  "<label>R: <input name='led_r' value='" +
+                                      led_r + "'></label><br>"
+                                              "<label>G: <input name='led_g' value='" +
+                                      led_g + "'></label><br>"
+                                              "<label>B: <input name='led_b' value='" +
+                                      led_b + "'></label><br><br>"
 
-        "<label>B: <input name='brightness' value='" +
-        brightness + "'></label><br><br>"
+                                              "<label>B: <input name='brightness' value='" +
+                                      brightness + "'></label><br><br>"
 
-        "<h2>Camera</h2><br>"
-        "<label>Width: <input name='led_g' value='" +
-        camera_width + "'></label><br>"
-        "<label>Height: <input name='led_g' value='" +
-        camera_height + "'></label><br>"
+                                                   "<h2>Camera</h2><br>"
+                                                   "<label>Width: <input name='led_g' value='" +
+                                      camera_width + "'></label><br>"
+                                                     "<label>Height: <input name='led_g' value='" +
+                                      camera_height + "'></label><br>"
 
-        "<h2>MQTT</h2><br>"
-        "<label>Server: <input name='mqtt_server' value='" +
-        mqtt_server + "'></label><br>"
-        "<label>Port: <input name='mqtt_port' value='" +
-        mqtt_port + "'></label><br>"
-        "<label>User: <input name='mqtt_user' value='" +
-        mqtt_user + "'></label><br>"
-        "<label>Password: <input name='mqtt_password' value='" +
-        mqtt_password + "'></label><br>"
+                                                      "<h2>MQTT</h2><br>"
+                                                      "<label>Server: <input name='mqtt_server' value='" +
+                                      mqtt_server + "'></label><br>"
+                                                    "<label>Port: <input name='mqtt_port' value='" +
+                                      mqtt_port + "'></label><br>"
+                                                  "<label>User: <input name='mqtt_user' value='" +
+                                      mqtt_user + "'></label><br>"
+                                                  "<label>Password: <input name='mqtt_password' value='" +
+                                      mqtt_password + "'></label><br>"
 
-        "<br>"
-        "<input type='submit'></form>");
+                                                      "<br>"
+                                                      "<input type='submit'></form>");
 }
 
-void handleSettingsSave() {
+void handleSettingsSave()
+{
     String led_r = server.arg("led_r");
     String led_g = server.arg("led_g");
     String led_b = server.arg("led_b");
@@ -270,7 +280,24 @@ void handleSettingsSave() {
     ESP.restart();
 }
 
-void setup() {
+unsigned long lastTemperatureAttempt = 0;
+const unsigned long temperatureInterval = 10000; // 2 секунды
+
+void temperatureLoop()
+{
+    unsigned long now = millis();
+    if (now - lastTemperatureAttempt >= temperatureInterval)
+    {
+        lastTemperatureAttempt = now;
+        float temperature = (float)temperatureRead();
+        globalData.temperature = temperature;
+        mqttTemperature(String(temperature));
+    }
+}
+
+
+void setup()
+{
     Serial.begin(115200);
 
     // Экран
@@ -302,7 +329,7 @@ void setup() {
         server.on("/save", HTTP_POST, handleSettingsSave);
 
         server.on("/", HTTP_GET, []()
-            {
+                  {
 
                 if (server.arg("action") == "stream") {
                     handleStream();
@@ -311,18 +338,28 @@ void setup() {
                     handleSnapshot();
                 } });
 
-                server.on("/led_on", handleLEDOn);
-                server.on("/led_off", handleLEDOff);
+        server.on("/led_on", handleLEDOn);
+        server.on("/led_off", handleLEDOff);
 
-                server.begin();
+        server.begin();
 
-                lcdPrint("MQTT Init");
-                Serial.println("MQTT Init");
-                mqttInit();
+        lcdPrint("MQTT Init");
+        Serial.println("MQTT Init");
+        mqttInit();
     }
 }
 
-void loop() {
+void commonLoop(){
+  server.handleClient();
+        mqttLoop();
+        if (getLcdState())
+        {
+            updateDisplay();
+        }
+}
+
+void loop()
+{
 
     // dnsServer.processNextRequest();
 
@@ -332,29 +369,27 @@ void loop() {
     }
     else
     {
-        server.handleClient();
-        mqttLoop();
-        if (getLcdState())
-        {
-            updateDisplay();
-        }
+      commonLoop();
     }
 }
 
-void handleLEDOn() {
+void handleLEDOn()
+{
     LedOn();
     server.send(200, "text/html", "LED ON");
 }
 
-void handleLEDOff() {
+void handleLEDOff()
+{
     LedOff();
     server.send(200, "text/html", "LED OFF");
 }
 
 // Функция для настройки сервера вещания с камеры
-void startCameraServer() {
+void startCameraServer()
+{
     server.on("/stream", HTTP_GET, []()
-        {
+              {
             //server.on("/stream", HTTP_GET, [](AsyncWebServerRequest *request){
             WiFiClient client = server.client();
             camera_fb_t* fb = NULL;
@@ -390,9 +425,10 @@ void startCameraServer() {
             Serial.println("Stream End"); });
 }
 
-void handleStream() {
+void handleStream()
+{
     WiFiClient client = server.client();
-    camera_fb_t* fb = NULL;
+    camera_fb_t *fb = NULL;
     Serial.println("Stream Start");
     if (!client.connected())
     {
@@ -420,16 +456,17 @@ void handleStream() {
         esp_camera_fb_return(fb);
 
         // Обработка запросов сервера каждые 10 итераций
-        if (counter++ % 10 == 0)
+        if (counter++ % 3 == 0)
         {
-            server.handleClient();
+            commonLoop();
         }
     }
     Serial.println("Stream End");
 }
 
-void handleSnapshot() {
-    camera_fb_t* fb = esp_camera_fb_get();
+void handleSnapshot()
+{
+    camera_fb_t *fb = esp_camera_fb_get();
     if (!fb)
     {
         Serial.println("Camera capture failed");

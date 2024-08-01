@@ -63,7 +63,7 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
                 LedOn(); // Функция для включения ленты
             }
             else if (state == "OFF")
-            {
+            { 
                 LedOff(); // Функция для выключения ленты
             }
         }
@@ -73,7 +73,7 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
             preferences.begin("settings", false);
             preferences.putString("brightness", brightness);
             preferences.end();
-            LedOn(false);
+            
         }
         if (doc.containsKey("rgb"))
         {
@@ -87,11 +87,13 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
             preferences.putString("led_g", led_g);
             preferences.putString("led_b", led_b);
             preferences.end();
-
-            LedOn(false);
+ 
         }
     }
 }
+
+
+int mqttConnectionTryes = 10;
 
 // Функция повторного подключения к MQTT серверу
 void mqttReconnect()
@@ -114,20 +116,20 @@ void mqttReconnect()
     Serial.println(mqtt_user);
     Serial.println(mqtt_password);
 
-    while (!mqttClient.connected())
+    if (!mqttClient.connected())
     {
         Serial.print("Attempting MQTT connection...");
+
         if (mqttClient.connect("ESP32Client", mqtt_user.c_str(), mqtt_password.c_str()))
         {
-            Serial.println("connected");
-            mqttTryes = 5;
+            Serial.println("connected");            
             globalData.isMqttConnected = true;
             isMqttConnected = true;
-            lcdPrint("MQTT Connected");
+          
+            mqttClient.subscribe("esp32/led/set");
+            mqttConnectionTryes=10;
 
-            mqttClient.subscribe("esp32/led/set"); 
-
-            LedOff();
+            //  LedOff();
         }
         else
         {
@@ -135,15 +137,15 @@ void mqttReconnect()
             Serial.print(mqttClient.state());
             Serial.println(" try again in 5 seconds");
             lcdPrint("MQTT failed");
+            globalData.isMqttConnected = false;
 
-            mqttTryes = mqttTryes - 1;
-            Serial.println(mqttTryes);
-            if (mqttTryes <= 0)
+            mqttTryes = mqttConnectionTryes - 1;
+            Serial.println(mqttConnectionTryes);
+            if (mqttConnectionTryes <= 0)
             {
-                isMqttDisabled = true;
-                break;
+                isMqttDisabled = true;            
             }
-            delay(5000);
+           
         }
     }
 }
@@ -157,6 +159,7 @@ void mqttInit()
     String mqtt_server = preferences.getString("mqtt_server", "");
     int mqtt_port = preferences.getInt("mqtt_port", 1883);
     preferences.end();
+     globalData.isMqttConnected = false;
 
     if (!mqtt_server.isEmpty())
     {
@@ -178,6 +181,7 @@ void mqttInit()
             mqttClient.setServer(mqtt_ip, mqtt_port);
         }
 
+        mqttClient.setKeepAlive(60); // Установить keep-alive интервал в 60 секунд
         mqttClient.setCallback(mqttCallback);
     }
     else
@@ -186,15 +190,25 @@ void mqttInit()
     }
 }
 
-// Функция для обработки MQTT сообщений
-void mqttLoop()
-{
-    if (!isMqttDisabled)
-    {
-        if (!mqttClient.connected())
-        {
+// Переменная для хранения времени последней попытки подключения
+unsigned long lastReconnectAttempt = 0;
 
-            mqttReconnect();
+// Интервал между попытками подключения (в миллисекундах)
+const unsigned long reconnectInterval = 1000;  // 2 секунды
+
+
+// Функция для обработки MQTT сообщений
+void mqttLoop(){
+     if (!isMqttDisabled){
+        unsigned long now = millis();  // Текущее время
+
+        if (!mqttClient.connected()){
+            // Проверяем, прошло ли достаточно времени с последней попытки подключения
+            if (now - lastReconnectAttempt >= reconnectInterval){
+                // Обновляем время последней попытки
+                lastReconnectAttempt = now;
+                mqttReconnect();
+            }
         }
         mqttClient.loop();
     }

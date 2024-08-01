@@ -46,7 +46,7 @@ void LedOn(bool isMqttStateSent=true) {
     ledBlock=false;
 }
 
-void LedOff() {
+void LedOff(bool isMqttStateSent=true) {
         if (ledBlock) return;
     ledBlock=true;    
     Serial.println("LedOff()");
@@ -57,7 +57,9 @@ void LedOff() {
     strip.show();
     ledState = false;
 
-    mqttStateLed("OFF", 0, 0, 0, 0);
+    if (isMqttStateSent){
+        mqttStateLed("OFF", 0, 0, 0, 0);
+    }
     ledBlock=false;
 }
 

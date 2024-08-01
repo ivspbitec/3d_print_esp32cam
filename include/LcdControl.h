@@ -71,11 +71,7 @@ void updateDisplay() {
         lastUpdate = currentMillis;
 
         
-        float temperature = (float)temperatureRead() ;
-        globalData.temperature = temperature; 
-           
-
-        mqttTemperature(String(temperature));
+    
 
         // Обновляем дисплей
         //lcdPrint("Wifi Connected. SSID: %s, IP: %s, RSSI: %d dBm, t: %.2f °C\nMQTT Command: %s",
