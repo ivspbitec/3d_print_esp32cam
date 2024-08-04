@@ -110,10 +110,10 @@ bool wifiConnect(String ssid, String password)
     while (WiFi.status() != WL_CONNECTED)
 
     {
-        delay(1000);
+        delay(2000);
         Serial.println("Connecting...");
         lcdPrint("Connecting...");
-        if (millis() - startTime > 10000)
+        if (millis() - startTime > 20000)
         { // Попытка подключения не более 10 секунд
             Serial.println("Connection timeout. Erasing WiFi credentials.");
             preferences.begin("wifi-config", false);
@@ -197,8 +197,9 @@ void handleSettings()
     String led_b = preferences.getString("led_b", "255");
     String brightness = preferences.getString("brightness", "255");
 
-    String camera_width = preferences.getString("camera_width", "");
-    String camera_height = preferences.getString("camera_height", "");
+    int resolution = preferences.getInt("resolution", FRAMESIZE_SVGA);
+    bool flip_vertical = preferences.getBool("flip_vertical", false);
+    String camera_quality = preferences.getString("camera_quality", "12");
 
     String mqtt_server = preferences.getString("mqtt_server", "");
     int mqtt_port = preferences.getInt("mqtt_port", 1883);
@@ -217,17 +218,39 @@ void handleSettings()
                                               "<label>B: <input name='led_b' value='" +
                                       led_b + "'></label><br><br>"
 
-                                              "<label>B: <input name='brightness' value='" +
+                                              "<label>Brightness: <input name='brightness' value='" +
                                       brightness + "'></label><br><br>"
 
                                                    "<h2>Camera</h2><br>"
-                                                   "<label>Width: <input name='led_g' value='" +
-                                      camera_width + "'></label><br>"
-                                                     "<label>Height: <input name='led_g' value='" +
-                                      camera_height + "'></label><br>"
+                                                   "<label>Flip Vertically: <input type='checkbox' name='flip_vertical' " +
+                                      (flip_vertical ? "checked" : "") + "></label><br>"
+                                                                         "<label>Resolution: <select name='resolution'>"
+                                                                         "<option value='" +
+                                      FRAMESIZE_QQVGA + "'" + (resolution == FRAMESIZE_QQVGA ? " selected" : "") + ">160x120</option>"
+                                                                                                                   "<option value='" +
+                                      FRAMESIZE_QCIF + "'" + (resolution == FRAMESIZE_QCIF ? " selected" : "") + ">176x144</option>"
+                                                                                                                 "<option value='" +
+                                      FRAMESIZE_HQVGA + "'" + (resolution == FRAMESIZE_HQVGA ? " selected" : "") + ">240x176</option>"
+                                                                                                                   "<option value='" +
+                                      FRAMESIZE_QVGA + "'" + (resolution == FRAMESIZE_QVGA ? " selected" : "") + ">320x240</option>"
+                                                                                                                 "<option value='" +
+                                      FRAMESIZE_VGA + "'" + (resolution == FRAMESIZE_VGA ? " selected" : "") + ">640x480</option>"
+                                                                                                               "<option value='" +
+                                      FRAMESIZE_SVGA + "'" + (resolution == FRAMESIZE_SVGA ? " selected" : "") + ">800x600</option>"
+                                                                                                                 "<option value='" +
+                                      FRAMESIZE_XGA + "'" + (resolution == FRAMESIZE_XGA ? " selected" : "") + ">1024x768</option>"
+                                                                                                               "<option value='" +
+                                      FRAMESIZE_HD + "'" + (resolution == FRAMESIZE_HD ? " selected" : "") + ">1280x720</option>"
+                                                                                                             "<option value='" +
+                                      FRAMESIZE_SXGA + "'" + (resolution == FRAMESIZE_SXGA ? " selected" : "") + ">1280x1024</option>"
+                                                                                                                 "<option value='" +
+                                      FRAMESIZE_UXGA + "'" + (resolution == FRAMESIZE_UXGA ? " selected" : "") + ">1600x1200</option>"
+                                                                                                                 "</select></label><br>"
+                                                                                                                 "<label>Quality: <input name='camera_quality' value='" +
+                                      camera_quality + "'></label><br>"
 
-                                                      "<h2>MQTT</h2><br>"
-                                                      "<label>Server: <input name='mqtt_server' value='" +
+                                                       "<h2>MQTT</h2><br>"
+                                                       "<label>Server: <input name='mqtt_server' value='" +
                                       mqtt_server + "'></label><br>"
                                                     "<label>Port: <input name='mqtt_port' value='" +
                                       mqtt_port + "'></label><br>"
@@ -247,9 +270,6 @@ void handleSettingsSave()
     String led_b = server.arg("led_b");
     String brightness = server.arg("brightness");
 
-    String camera_height = server.arg("camera_height");
-    String camera_width = server.arg("camera_width");
-
     String mqtt_server = server.arg("mqtt_server");
     String mqtt_port = server.arg("mqtt_port");
     String mqtt_user = server.arg("mqtt_user");
@@ -260,8 +280,14 @@ void handleSettingsSave()
     preferences.putString("led_g", led_g);
     preferences.putString("led_b", led_b);
     preferences.putString("brightness", brightness);
-    preferences.putString("camera_width", camera_width);
-    preferences.putString("camera_height", camera_height);
+
+    int resolution = server.arg("resolution").toInt();
+    bool flip_vertical = server.arg("flip_vertical") == "on";
+    int camera_quality = server.arg("camera_quality").toInt();
+
+    preferences.putInt("camera_quality", camera_quality);
+    preferences.putInt("resolution", resolution);
+    preferences.putBool("flip_vertical", flip_vertical);
 
     mqtt_server.trim();
     mqtt_user.trim();
@@ -276,6 +302,8 @@ void handleSettingsSave()
 
     server.sendHeader("Location", "/settings", true);
     server.send(303); // Код состояния 303 See Other
+
+    delay(500);
 
     ESP.restart();
 }
@@ -294,7 +322,6 @@ void temperatureLoop()
         mqttTemperature(String(temperature));
     }
 }
-
 
 void setup()
 {
@@ -349,13 +376,15 @@ void setup()
     }
 }
 
-void commonLoop(){
-  server.handleClient();
-        mqttLoop();
-        if (getLcdState())
-        {
-            updateDisplay();
-        }
+void commonLoop()
+{
+    server.handleClient();
+    mqttLoop();
+    if (getLcdState())
+    {
+        updateDisplay();
+    }
+    temperatureLoop();
 }
 
 void loop()
@@ -369,7 +398,7 @@ void loop()
     }
     else
     {
-      commonLoop();
+        commonLoop();
     }
 }
 
