@@ -195,11 +195,11 @@ void handleSettings()
     String led_r = preferences.getString("led_r", "255");
     String led_g = preferences.getString("led_g", "255");
     String led_b = preferences.getString("led_b", "255");
-    String brightness = preferences.getString("brightness", "255");
+    int brightness = preferences.getInt("brightness", 0);
 
     int resolution = preferences.getInt("resolution", FRAMESIZE_SVGA);
     bool flip_vertical = preferences.getBool("flip_vertical", false);
-    String camera_quality = preferences.getString("camera_quality", "12");
+    int camera_quality = preferences.getInt("camera_quality", 12);
 
     String mqtt_server = preferences.getString("mqtt_server", "");
     int mqtt_port = preferences.getInt("mqtt_port", 1883);
@@ -218,7 +218,7 @@ void handleSettings()
                                               "<label>B: <input name='led_b' value='" +
                                       led_b + "'></label><br><br>"
 
-                                              "<label>Brightness: <input name='brightness' value='" +
+                                              "<label>Brightness (-2;+2): <input name='brightness' value='" +
                                       brightness + "'></label><br><br>"
 
                                                    "<h2>Camera</h2><br>"
@@ -246,8 +246,20 @@ void handleSettings()
                                                                                                                  "<option value='" +
                                       FRAMESIZE_UXGA + "'" + (resolution == FRAMESIZE_UXGA ? " selected" : "") + ">1600x1200</option>"
                                                                                                                  "</select></label><br>"
-                                                                                                                 "<label>Quality: <input name='camera_quality' value='" +
-                                      camera_quality + "'></label><br>"
+ 
+                              "<label>Quality: <select name='camera_quality'>"
+                              "<option value='5'" + (camera_quality == 5 ? " selected" : "") + ">Best (5)</option>"
+                              "<option value='7'" + (camera_quality == 7 ? " selected" : "") + ">Very High (7)</option>"
+                              "<option value='10'" + (camera_quality == 10 ? " selected" : "") + ">High (10)</option>"
+                              "<option value='12'" + (camera_quality == 12 ? " selected" : "") + ">Good (12)</option>"
+                              "<option value='15'" + (camera_quality == 15 ? " selected" : "") + ">Standard (15)</option>"
+                              "<option value='17'" + (camera_quality == 17 ? " selected" : "") + ">Balanced (17)</option>"
+                              "<option value='20'" + (camera_quality == 20 ? " selected" : "") + ">Medium (20)</option>"
+                              "<option value='25'" + (camera_quality == 25 ? " selected" : "") + ">Low (25)</option>"
+                              "<option value='30'" + (camera_quality == 30 ? " selected" : "") + ">Very Low (30)</option>"
+                              "<option value='40'" + (camera_quality == 40 ? " selected" : "") + ">Worst (40)</option>"
+                              "</select></label><br>"
+ 
 
                                                        "<h2>MQTT</h2><br>"
                                                        "<label>Server: <input name='mqtt_server' value='" +
@@ -268,7 +280,7 @@ void handleSettingsSave()
     String led_r = server.arg("led_r");
     String led_g = server.arg("led_g");
     String led_b = server.arg("led_b");
-    String brightness = server.arg("brightness");
+    int brightness = server.arg("brightness").toInt();
 
     String mqtt_server = server.arg("mqtt_server");
     String mqtt_port = server.arg("mqtt_port");
@@ -279,7 +291,7 @@ void handleSettingsSave()
     preferences.putString("led_r", led_r);
     preferences.putString("led_g", led_g);
     preferences.putString("led_b", led_b);
-    preferences.putString("brightness", brightness);
+    preferences.putInt("brightness", brightness);
 
     int resolution = server.arg("resolution").toInt();
     bool flip_vertical = server.arg("flip_vertical") == "on";

@@ -68,6 +68,8 @@ void cameraInit()
     int resolution = preferences.getInt("resolution", FRAMESIZE_SVGA);
     bool flip_vertical = preferences.getBool("flip_vertical", false);
     int camera_quality = preferences.getInt("camera_quality", 12);
+    int brightness = preferences.getInt("brightness", 0);
+    
     preferences.end();
 
    //  config.frame_size = FRAMESIZE_SVGA; // 640x480
@@ -80,6 +82,7 @@ void cameraInit()
     Serial.println(camera_quality);
     Serial.println(resolution);
     Serial.println(flip_vertical);
+    Serial.println(brightness);
 
     // config.frame_size = FRAMESIZE_96X96; // 640x480
 
@@ -105,6 +108,16 @@ void cameraInit()
         s->set_vflip(s, 1); // 1 для включения переворота, 0 для отключения
         s->set_hmirror(s, 1);
     }
+
+// Ограничиваем диапазон яркости [-2, 2]
+if (brightness < -2) brightness = -2;
+if (brightness > 2) brightness = 2;
+
+// Устанавливаем яркость на камеру
+sensor_t *s = esp_camera_sensor_get();
+if (s != 0) {
+    s->set_brightness(s, brightness);
+}
 
     Serial.println("Camera reinitialized successfully");
 }
