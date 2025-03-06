@@ -4,6 +4,10 @@
 #include "esp_system.h"
 #include <ArduinoJson.h>
 
+#ifndef LED_BUILTIN
+#define LED_BUILTIN 4   // GPIO 4 — мощный светодиод (Flash LED)
+#endif
+
 struct DisplayData
 {
     String ssid;
@@ -23,6 +27,8 @@ DisplayData globalData; // Глобальная переменная для хр
 #define LED_PIN 2
 #define LED_COUNT 6
 #include "LedControl.h"
+
+
 
 #define DispSdaPin 15
 #define DispSclPin 13
@@ -178,6 +184,51 @@ void wifiInit()
     }
 }
 
+unsigned long lastWifiCheck = 0;
+const unsigned long wifiCheckInterval = 30000; // проверка каждые 30 сек
+
+/** Проверка подключения к wifi в процессе работы*/
+void checkWiFiConnection()
+{
+    unsigned long now = millis();
+    if (now - lastWifiCheck >= wifiCheckInterval)
+    {
+
+        lastWifiCheck = now;
+
+        if (WiFi.status() != WL_CONNECTED)
+        {
+            Serial.println("WiFi disconnected, attempting reconnect...");
+            lcdPrint("WiFi lost, reconnecting...");
+
+            preferences.begin("wifi-config", true);
+            String ssid = preferences.getString("ssid", "");
+            String password = preferences.getString("password", "");
+            preferences.end();
+
+            if (ssid != "")
+            {
+                wifiConnect(ssid, password);
+            }
+
+            if (WiFi.status() == WL_CONNECTED)
+            {
+                Serial.println("WiFi reconnected successfully!");
+                lcdPrint("WiFi reconnected: %s", WiFi.localIP().toString());
+                globalData.isWifiConnected = true;
+            }
+            else
+            {
+                Serial.println("WiFi reconnection failed!");
+                lcdPrint("WiFi reconnect failed!");
+                globalData.isWifiConnected = false;
+                delay(1000);  
+                ESP.restart();                
+            }
+        }
+    }
+}
+
 void handleReset()
 {
     preferences.begin("wifi-config", false);
@@ -246,23 +297,32 @@ void handleSettings()
                                                                                                                  "<option value='" +
                                       FRAMESIZE_UXGA + "'" + (resolution == FRAMESIZE_UXGA ? " selected" : "") + ">1600x1200</option>"
                                                                                                                  "</select></label><br>"
- 
-                              "<label>Quality: <select name='camera_quality'>"
-                              "<option value='5'" + (camera_quality == 5 ? " selected" : "") + ">Best (5)</option>"
-                              "<option value='7'" + (camera_quality == 7 ? " selected" : "") + ">Very High (7)</option>"
-                              "<option value='10'" + (camera_quality == 10 ? " selected" : "") + ">High (10)</option>"
-                              "<option value='12'" + (camera_quality == 12 ? " selected" : "") + ">Good (12)</option>"
-                              "<option value='15'" + (camera_quality == 15 ? " selected" : "") + ">Standard (15)</option>"
-                              "<option value='17'" + (camera_quality == 17 ? " selected" : "") + ">Balanced (17)</option>"
-                              "<option value='20'" + (camera_quality == 20 ? " selected" : "") + ">Medium (20)</option>"
-                              "<option value='25'" + (camera_quality == 25 ? " selected" : "") + ">Low (25)</option>"
-                              "<option value='30'" + (camera_quality == 30 ? " selected" : "") + ">Very Low (30)</option>"
-                              "<option value='40'" + (camera_quality == 40 ? " selected" : "") + ">Worst (40)</option>"
-                              "</select></label><br>"
- 
 
-                                                       "<h2>MQTT</h2><br>"
-                                                       "<label>Server: <input name='mqtt_server' value='" +
+                                                                                                                 "<label>Quality: <select name='camera_quality'>"
+                                                                                                                 "<option value='5'" +
+                                      (camera_quality == 5 ? " selected" : "") + ">Best (5)</option>"
+                                                                                 "<option value='7'" +
+                                      (camera_quality == 7 ? " selected" : "") + ">Very High (7)</option>"
+                                                                                 "<option value='10'" +
+                                      (camera_quality == 10 ? " selected" : "") + ">High (10)</option>"
+                                                                                  "<option value='12'" +
+                                      (camera_quality == 12 ? " selected" : "") + ">Good (12)</option>"
+                                                                                  "<option value='15'" +
+                                      (camera_quality == 15 ? " selected" : "") + ">Standard (15)</option>"
+                                                                                  "<option value='17'" +
+                                      (camera_quality == 17 ? " selected" : "") + ">Balanced (17)</option>"
+                                                                                  "<option value='20'" +
+                                      (camera_quality == 20 ? " selected" : "") + ">Medium (20)</option>"
+                                                                                  "<option value='25'" +
+                                      (camera_quality == 25 ? " selected" : "") + ">Low (25)</option>"
+                                                                                  "<option value='30'" +
+                                      (camera_quality == 30 ? " selected" : "") + ">Very Low (30)</option>"
+                                                                                  "<option value='40'" +
+                                      (camera_quality == 40 ? " selected" : "") + ">Worst (40)</option>"
+                                                                                  "</select></label><br>"
+
+                                                                                  "<h2>MQTT</h2><br>"
+                                                                                  "<label>Server: <input name='mqtt_server' value='" +
                                       mqtt_server + "'></label><br>"
                                                     "<label>Port: <input name='mqtt_port' value='" +
                                       mqtt_port + "'></label><br>"
@@ -320,9 +380,9 @@ void handleSettingsSave()
     ESP.restart();
 }
 
+
 unsigned long lastTemperatureAttempt = 0;
 const unsigned long temperatureInterval = 10000; // 2 секунды
-
 void temperatureLoop()
 {
     unsigned long now = millis();
@@ -335,9 +395,34 @@ void temperatureLoop()
     }
 }
 
+unsigned long lastBuiltinLedCheck = 0;
+const unsigned long builtinLedCheckInterval = 1000; // Проверка каждую секунду
+bool lastBuiltinLedState = LOW;
+
+void builtinLedStateLoop()
+{
+    unsigned long now = millis();
+    if (now - lastBuiltinLedCheck >= builtinLedCheckInterval)
+    {
+        lastBuiltinLedCheck = now;
+        bool currentLedState = digitalRead(LED_BUILTIN);
+        if (currentLedState != lastBuiltinLedState)
+        {
+            lastBuiltinLedState = currentLedState;
+            mqttBuiltinLedState(currentLedState ? "ON" : "OFF");
+        }
+    }
+}
+
+
+
 void setup()
 {
     Serial.begin(115200);
+
+    pinMode(LED_BUILTIN, OUTPUT);    
+    digitalWrite(LED_BUILTIN, LOW);  
+
 
     // Экран
     lcdInit();
@@ -396,7 +481,11 @@ void commonLoop()
     {
         updateDisplay();
     }
+    
     temperatureLoop();
+    builtinLedStateLoop();
+
+    checkWiFiConnection();
 }
 
 void loop()
@@ -530,3 +619,5 @@ void handleSnapshot()
 
     esp_camera_fb_return(fb);
 }
+
+

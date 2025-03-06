@@ -17,6 +17,7 @@ extern DisplayData globalData;
 bool isMqttConnected = false;
 bool isMqttDisabled = false;
 int mqttTryes = 5;
+String mqtt_user_global;
 
 void mqttCallback(char *topic, byte *payload, unsigned int length)
 {
@@ -44,12 +45,12 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
     {
         Serial.print("deserializeJson() failed: ");
         Serial.println(error.c_str());
-        return;
+         
     }
 
     String topicStr = String(topic);
 
-    if (topicStr == "esp32/led/set")
+    if (topicStr == String(mqtt_user_global+"/led/set"))
     {
 
         if (doc.containsKey("state"))
@@ -58,13 +59,16 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
 
             // if (doc.containsKey("brightness")) {
             // v   String state = doc.as<String>();
-            if (state == "ON")
+            if (state == "on")
             {
                 LedOn(); // Функция для включения ленты
+                Serial.print("mqttCallback() /led/set on ");
             }
-            else if (state == "OFF")
+            else if (state == "off")
             { 
                 LedOff(); // Функция для выключения ленты
+
+                Serial.print("mqttCallback() /led/set off ");
             }
         }
         if (doc.containsKey("brightness"))
@@ -73,6 +77,8 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
             preferences.begin("settings", false);
             preferences.putString("brightness", brightness);
             preferences.end();
+
+            Serial.print("mqttCallback() /led/set brightness ");
             
         }
         if (doc.containsKey("rgb"))
@@ -87,7 +93,33 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
             preferences.putString("led_g", led_g);
             preferences.putString("led_b", led_b);
             preferences.end();
+
+            Serial.print("mqttCallback() /led/set rgb ");
  
+        }
+    } else if (topicStr == String(mqtt_user_global+"/cmd"))
+    {
+        if (message == "restart"){
+            Serial.print("mqttCallback() /cmd/ restart ");
+            lcdPrint("Restarting...");
+            ESP.restart();
+        }    
+    } else if (topicStr == String(mqtt_user_global+"/led_builtin/set"))
+    {
+        if (doc.containsKey("state"))
+        {
+            String state = doc["state"].as<String>();
+ 
+            if (state == "on")
+            {
+                digitalWrite(LED_BUILTIN, HIGH);
+                 Serial.print("mqttCallback() /led_builtin/set on ");
+            }
+            else if (state == "off")
+            { 
+                digitalWrite(LED_BUILTIN, LOW);
+                Serial.print("mqttCallback() /led_builtin/set off ");
+            }
         }
     }
 }
@@ -108,6 +140,8 @@ void mqttReconnect()
     String mqtt_password = preferences.getString("mqtt_password", "");
     preferences.end();
 
+    mqtt_user_global=mqtt_user;
+
     if (mqtt_server == "")
         return;
     Serial.println("mqttReconnect");
@@ -120,13 +154,16 @@ void mqttReconnect()
     {
         Serial.print("Attempting MQTT connection...");
 
-        if (mqttClient.connect("ESP32Client", mqtt_user.c_str(), mqtt_password.c_str()))
+        /*if (mqttClient.connect("ESP32Client", mqtt_user.c_str(), mqtt_password.c_str()))*/
+        if (mqttClient.connect(mqtt_user.c_str(), mqtt_user.c_str(), mqtt_password.c_str()))
         {
             Serial.println("connected");            
             globalData.isMqttConnected = true;
             isMqttConnected = true;
           
-            mqttClient.subscribe("esp32/led/set");
+            mqttClient.subscribe((mqtt_user_global + "/led/set").c_str());
+            mqttClient.subscribe((mqtt_user_global + "/led_builtin/set").c_str());
+            mqttClient.subscribe((mqtt_user_global + "/cmd").c_str());
             mqttConnectionTryes=10;
 
             //  LedOff();
@@ -202,11 +239,14 @@ void mqttLoop(){
      if (!isMqttDisabled){
         unsigned long now = millis();  // Текущее время
 
-        if (!mqttClient.connected()){
+        //if (!isMqttConnected){
+        if (!mqttClient.connected()){ 
             // Проверяем, прошло ли достаточно времени с последней попытки подключения
             if (now - lastReconnectAttempt >= reconnectInterval){
                 // Обновляем время последней попытки
                 lastReconnectAttempt = now;
+                Serial.println("mqttLoop -> mqttReconnect()");
+                
                 mqttReconnect();
             }
         }
@@ -237,7 +277,7 @@ void mqttStateLed(const String &state, int led_r, int led_g, int led_b, int brig
     serializeJson(doc, buffer);
 
     // Публикуем сообщение в формате JSON
-    mqttClient.publish("esp32/led/state", buffer);
+    mqttClient.publish(String(mqtt_user_global+"/led/state").c_str(), buffer);
 }
 
 // Функции установки состояний
@@ -249,5 +289,19 @@ void mqttTemperature(const String &state)
     if (!isMqttConnected)
         return;
 
-    mqttClient.publish("esp32/temperature/state", state.c_str());
+    mqttClient.publish(String(mqtt_user_global+"/temperature/state").c_str(), state.c_str());
+}
+
+
+
+void mqttBuiltinLedState(const String &state)
+{
+    if (isMqttDisabled || !mqttClient.connected()) return;
+    StaticJsonDocument<64> doc;
+    doc["state"] = state;
+
+    char buffer[64];
+    serializeJson(doc, buffer);
+
+    mqttClient.publish(String(mqtt_user_global+"/led_builtin/state").c_str(), buffer);
 }
