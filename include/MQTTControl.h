@@ -24,6 +24,12 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
     if (isMqttDisabled)
         return;
 
+    Serial.println("MQTT Callback received");
+    Serial.print("Topic: ");
+    Serial.println(topic);
+    Serial.print("Length: ");
+    Serial.println(length);
+
     // Создаем строку из полученного сообщения
     String message;
     for (unsigned int i = 0; i < length; i++)
@@ -59,12 +65,12 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
 
             // if (doc.containsKey("brightness")) {
             // v   String state = doc.as<String>();
-            if (state == "on")
+            if (state == "ON")
             {
                 LedOn(); // Функция для включения ленты
                 Serial.print("mqttCallback() /led/set on ");
             }
-            else if (state == "off")
+            else if (state == "OFF")
             { 
                 LedOff(); // Функция для выключения ленты
 
@@ -110,22 +116,58 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
         {
             String state = doc["state"].as<String>();
  
-            if (state == "on")
+            if (state == "ON")
             {
                 digitalWrite(LED_BUILTIN, HIGH);
                  Serial.print("mqttCallback() /led_builtin/set on ");
             }
-            else if (state == "off")
+            else if (state == "OFF")
             { 
                 digitalWrite(LED_BUILTIN, LOW);
                 Serial.print("mqttCallback() /led_builtin/set off ");
             }
         }
+    } else if (topicStr == String(mqtt_user_global+"/camera/set"))
+    {
+        if (doc.containsKey("resolution"))
+        {
+            Serial.print("mqttCallback() /camera/set ");
+            int resolution;
+            if (doc["resolution"].is<String>()) {
+                resolution = doc["resolution"].as<String>().toInt();
+            } else {
+                resolution = doc["resolution"].as<int>();
+            }
+            preferences.begin("settings", false);
+            preferences.putInt("resolution", resolution);
+            preferences.end();
+            Serial.print("mqttCallback() /camera/set resolution ");
+            Serial.println(resolution);
+        }
+        if (doc.containsKey("quality"))
+        {
+            int quality;
+            if (doc["quality"].is<String>()) {
+                quality = doc["quality"].as<String>().toInt();
+            } else {
+                quality = doc["quality"].as<int>();
+            }
+            preferences.begin("settings", false); 
+            preferences.putInt("camera_quality", quality);
+            preferences.end();
+            Serial.print("mqttCallback() /camera/set quality ");
+            Serial.println(quality);
+        }
+
+        if (doc.containsKey("resolution") || doc.containsKey("quality")){
+            delay(500);
+            ESP.restart();
+        }
     }
 }
 
 
-int mqttConnectionTryes = 10;
+int mqttConnectionTryes = 5;
 
 // Функция повторного подключения к MQTT серверу
 void mqttReconnect()
@@ -164,6 +206,7 @@ void mqttReconnect()
             mqttClient.subscribe((mqtt_user_global + "/led/set").c_str());
             mqttClient.subscribe((mqtt_user_global + "/led_builtin/set").c_str());
             mqttClient.subscribe((mqtt_user_global + "/cmd").c_str());
+            mqttClient.subscribe((mqtt_user_global + "/camera/set").c_str());
             mqttConnectionTryes=10;
 
             //  LedOff();
@@ -304,4 +347,17 @@ void mqttBuiltinLedState(const String &state)
     serializeJson(doc, buffer);
 
     mqttClient.publish(String(mqtt_user_global+"/led_builtin/state").c_str(), buffer);
+}
+
+void mqttCameraState(int resolution, int quality)
+{
+    if (isMqttDisabled || !mqttClient.connected()) return;
+    StaticJsonDocument<128> doc;
+    doc["resolution"] = resolution;
+    doc["quality"] = quality;
+
+    char buffer[128];
+    serializeJson(doc, buffer);
+
+    mqttClient.publish(String(mqtt_user_global+"/camera/state").c_str(), buffer);
 }

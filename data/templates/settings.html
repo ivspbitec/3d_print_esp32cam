@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Настройки ESP32-CAM</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            font-size: 16px;
+            line-height: 1.5;
+            -webkit-text-size-adjust: 100%;
+        }
+        .main-title {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+        form {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            margin-top: 20px;
+            font-size: 20px;
+        }
+        label {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+            color: #555;
+            font-size: 16px;
+        }
+        label span {
+            flex: 0 0 33.33%;
+            padding-right: 10px;
+            font-size: 16px;
+        }
+        input[type="text"],
+        input[type="number"],
+        select {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            background-color: #f9f9f9;
+            font-size: 16px;
+            height: 45px;
+        }
+        input[type="text"] {
+            border: 1px solid #e0e0e0;
+            padding: 12px;
+            margin: 4px 0;
+        }
+        input[type="checkbox"] {
+            margin-right: 8px;
+            width: 20px;
+            height: 20px;
+        }
+        input[type="submit"] {
+            background-color: #4a90e2;
+            color: white;
+            padding: 15px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+            width: 100%;
+            height: 50px;
+        }
+        input[type="submit"]:hover {
+            background-color: #357abd;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .mqtt-topics {
+            background-color: #f8f9fa;
+            border-left: 4px solid #4a90e2;
+            padding: 20px;
+            margin: 15px 0;
+            font-size: 15px;
+            color: #666;
+        }
+        .mqtt-topics h3 {
+            margin-top: 0;
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        .mqtt-topics ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .mqtt-topics li {
+            margin: 8px 0;
+            line-height: 1.4;
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            form {
+                padding: 15px;
+            }
+            label {
+                flex-direction: column;
+                align-items: flex-start;
+                margin: 10px 0;
+            }
+            label span {
+                flex: none;
+                width: 100%;
+                margin-bottom: 5px;
+                padding-right: 0;
+            }
+            input[type="text"],
+            input[type="number"],
+            select {
+                width: 100%;
+                margin: 0;
+                box-sizing: border-box;
+            }
+            .mqtt-topics {
+                padding: 15px;
+                font-size: 14px;
+            }
+            .mqtt-topics h3 {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1 class="main-title">Настройки ESP32-CAM</h1>
+    <form method='POST' action='/save'>
+        <div class="section">
+            <h2>Подсветка камеры</h2>
+            <label><span>R:</span> <input type="text" name='led_r' value='%LED_R%'></label>
+            <label><span>G:</span> <input type="text" name='led_g' value='%LED_G%'></label>
+            <label><span>B:</span> <input type="text" name='led_b' value='%LED_B%'></label>
+            <label><span>Яркость (-2;+2):</span> <input type="text" name='brightness' value='%BRIGHTNESS%'></label>
+        </div>
+        
+        <div class="section">
+            <h2>Camera</h2>
+            <label><span>Flip Vertically:</span> <input type='checkbox' name='flip_vertical' %FLIP_VERTICAL%></label>
+            <label><span>Resolution:</span> <select name='resolution'>
+                <option value='%FRAMESIZE_QQVGA%' %QQVGA_SELECTED%>160x120 (%FRAMESIZE_QQVGA%)</option>
+                <option value='%FRAMESIZE_QCIF%' %QCIF_SELECTED%>176x144 (%FRAMESIZE_QCIF%)</option>
+                <option value='%FRAMESIZE_HQVGA%' %HQVGA_SELECTED%>240x176 (%FRAMESIZE_HQVGA%)</option>
+                <option value='%FRAMESIZE_QVGA%' %QVGA_SELECTED%>320x240 (%FRAMESIZE_QVGA%)</option>
+                <option value='%FRAMESIZE_VGA%' %VGA_SELECTED%>640x480 (%FRAMESIZE_VGA%)</option>
+                <option value='%FRAMESIZE_SVGA%' %SVGA_SELECTED%>800x600 (%FRAMESIZE_SVGA%)</option>
+                <option value='%FRAMESIZE_XGA%' %XGA_SELECTED%>1024x768 (%FRAMESIZE_XGA%)</option>
+                <option value='%FRAMESIZE_HD%' %HD_SELECTED%>1280x720 (%FRAMESIZE_HD%)</option>
+                <option value='%FRAMESIZE_SXGA%' %SXGA_SELECTED%>1280x1024 (%FRAMESIZE_SXGA%)</option>
+                <option value='%FRAMESIZE_UXGA%' %UXGA_SELECTED%>1600x1200 (%FRAMESIZE_UXGA%)</option>
+            </select></label>
+
+            <label><span>Quality:</span> <select name='camera_quality'>
+                <option value='%QUALITY_5%' %QUALITY_5_SELECTED%>Best (%QUALITY_5%)</option>
+                <option value='%QUALITY_7%' %QUALITY_7_SELECTED%>Very High (%QUALITY_7%)</option>
+                <option value='%QUALITY_10%' %QUALITY_10_SELECTED%>High (%QUALITY_10%)</option>
+                <option value='%QUALITY_12%' %QUALITY_12_SELECTED%>Good (%QUALITY_12%)</option>
+                <option value='%QUALITY_15%' %QUALITY_15_SELECTED%>Standard (%QUALITY_15%)</option>
+                <option value='%QUALITY_17%' %QUALITY_17_SELECTED%>Balanced (%QUALITY_17%)</option>
+                <option value='%QUALITY_20%' %QUALITY_20_SELECTED%>Medium (%QUALITY_20%)</option>
+                <option value='%QUALITY_25%' %QUALITY_25_SELECTED%>Low (%QUALITY_25%)</option>
+                <option value='%QUALITY_30%' %QUALITY_30_SELECTED%>Very Low (%QUALITY_30%)</option>
+                <option value='%QUALITY_40%' %QUALITY_40_SELECTED%>Worst (%QUALITY_40%)</option>
+            </select></label> 
+        </div>
+
+        <input type='submit' value='Save'>
+
+        <div class="section">
+            <h2>MQTT</h2>
+            <label><span>Server:</span> <input type="text" name='mqtt_server' value='%MQTT_SERVER%'></label>
+            <label><span>Port:</span> <input type="text" name='mqtt_port' value='%MQTT_PORT%'></label>
+            <label><span>User:</span> <input type="text" name='mqtt_user' value='%MQTT_USER%'></label>
+            <label><span>Password:</span> <input type="text" name='mqtt_password' value='%MQTT_PASSWORD%'></label>
+            
+
+
+            <div class="mqtt-topics">
+                <h3>Доступные MQTT топики:</h3>
+                <p><strong>Корневой элемент:</strong> %MQTT_USER%</p>
+                <p><em>Все топики начинаются с корневого элемента, например: %MQTT_USER%/led/set</em></p>
+                <ul>
+                    <li><strong>Подсветка камеры:</strong>
+                        <ul>
+                            <li>Топик: %MQTT_USER%/led/set
+                                <ul>
+                                    <li>Сообщение: "on" - включить подсветку</li>
+                                    <li>Сообщение: "off" - выключить подсветку</li>
+                                    <li>Сообщение: "brightness [значение]" - установить яркость</li>
+                                    <li>Сообщение: "rgb [r,g,b]" - установить цвет</li>
+                                </ul>
+                            </li>
+                            <li>Топик: %MQTT_USER%/led/state<br>Сообщение: {"state": "ON/OFF", "brightness": 0, "color": {"r": 255, "g": 255, "b": 255}}</li>
+                        </ul>
+                    </li>
+                    <li><strong>Встроенный светодиод:</strong>
+                        <ul>
+                            <li>Топик: %MQTT_USER%/led_builtin/set
+                                <ul>
+                                    <li>Сообщение: {"state": "ON"} - включить</li>
+                                    <li>Сообщение: {"state": "OFF"} - выключить</li>
+                                </ul>
+                            </li>
+                            <li>Топик: %MQTT_USER%/led_builtin/state<br>Сообщение: {"state": "ON/OFF"}</li>
+                        </ul>
+                    </li>
+                    <li><strong>Системные команды:</strong>
+                        <ul>
+                            <li>Топик: %MQTT_USER%/cmd<br>Сообщение: "restart" - перезапуск устройства</li>
+                        </ul>
+                    </li>
+                    <li><strong>Управление камерой:</strong>
+                        <ul>
+                            <li>Топик: %MQTT_USER%/camera/set
+                                <ul>
+                                    <li>Сообщение: {"resolution": [значение]} - установить разрешение (5-40)</li>
+                                    <li>Сообщение: {"quality": [значение]} - установить качество (5-40)</li>
+                                </ul>
+                            </li>
+                            <li>Топик: %MQTT_USER%/camera/state<br>Сообщение: {"resolution": 10, "quality": 12}</li>
+                        </ul>
+                    </li>
+                    <li><strong>Датчики:</strong>
+                        <ul>
+                            <li>Топик: %MQTT_USER%/temperature<br>Сообщение: числовое значение температуры</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+      
+        <div style="text-align: center; margin-top: 20px; color: #666; font-size: 14px;">
+            <p>© 2024 ESP32-CAM Camera Controller</p>
+            <p>Version: %VERSION%</p>
+        </div>
+    </form>
+</body>
+</html> 

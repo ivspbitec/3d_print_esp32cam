@@ -3,6 +3,7 @@
 #include <Preferences.h>
 #include "esp_system.h"
 #include <ArduinoJson.h>
+#include "SPIFFS.h"
 
 #ifndef LED_BUILTIN
 #define LED_BUILTIN 4   // GPIO 4 — мощный светодиод (Flash LED)
@@ -34,7 +35,7 @@ DisplayData globalData; // Глобальная переменная для хр
 #define DispSclPin 13
 #include "LcdControl.h"
 
-const char *apSSID = "ESP_32CM";
+const char *apSSID = "ESP32_CAM";
 const char *apPassword = "987654321S";
 
 WebServer server(8080);
@@ -67,7 +68,8 @@ void handleSave()
 {
     String ssid = serverSettings.arg("ssid");
     String password = serverSettings.arg("password");
-
+    
+    
     // Сохранение SSID и пароля в NVS
     preferences.begin("wifi-config", false);
     preferences.putString("ssid", ssid);
@@ -239,9 +241,16 @@ void handleReset()
     preferences.end();
 }
 
+// Определение версии из Git
+#define VERSION_MAJOR 1
+#define VERSION_MINOR 0
+#define VERSION_PATCH 0
+#define VERSION_BUILD __TIME__[6] // Используем секунды из времени компиляции как build number
+
+#define VERSION_STRING String(VERSION_MAJOR) + "." + String(VERSION_MINOR) + "." + String(VERSION_PATCH) + "." + String(VERSION_BUILD)
+
 void handleSettings()
 {
-
     preferences.begin("settings", true);
     String led_r = preferences.getString("led_r", "255");
     String led_g = preferences.getString("led_g", "255");
@@ -257,82 +266,44 @@ void handleSettings()
     String mqtt_user = preferences.getString("mqtt_user", "");
     String mqtt_password = preferences.getString("mqtt_password", "");
     preferences.end();
-    // 192.168.0.104
-    // esp32cam
-    // esP365
-    server.send(200, "text/html", "<form method='POST' action='/save'>"
-                                  "<h2>Led</h2><br>"
-                                  "<label>R: <input name='led_r' value='" +
-                                      led_r + "'></label><br>"
-                                              "<label>G: <input name='led_g' value='" +
-                                      led_g + "'></label><br>"
-                                              "<label>B: <input name='led_b' value='" +
-                                      led_b + "'></label><br><br>"
 
-                                              "<label>Brightness (-2;+2): <input name='brightness' value='" +
-                                      brightness + "'></label><br><br>"
+    // Читаем шаблон из SPIFFS
+    File file = SPIFFS.open("/templates/settings.html", "r");
+    String html = file.readString();
+    file.close();
 
-                                                   "<h2>Camera</h2><br>"
-                                                   "<label>Flip Vertically: <input type='checkbox' name='flip_vertical' " +
-                                      (flip_vertical ? "checked" : "") + "></label><br>"
-                                                                         "<label>Resolution: <select name='resolution'>"
-                                                                         "<option value='" +
-                                      FRAMESIZE_QQVGA + "'" + (resolution == FRAMESIZE_QQVGA ? " selected" : "") + ">160x120</option>"
-                                                                                                                   "<option value='" +
-                                      FRAMESIZE_QCIF + "'" + (resolution == FRAMESIZE_QCIF ? " selected" : "") + ">176x144</option>"
-                                                                                                                 "<option value='" +
-                                      FRAMESIZE_HQVGA + "'" + (resolution == FRAMESIZE_HQVGA ? " selected" : "") + ">240x176</option>"
-                                                                                                                   "<option value='" +
-                                      FRAMESIZE_QVGA + "'" + (resolution == FRAMESIZE_QVGA ? " selected" : "") + ">320x240</option>"
-                                                                                                                 "<option value='" +
-                                      FRAMESIZE_VGA + "'" + (resolution == FRAMESIZE_VGA ? " selected" : "") + ">640x480</option>"
-                                                                                                               "<option value='" +
-                                      FRAMESIZE_SVGA + "'" + (resolution == FRAMESIZE_SVGA ? " selected" : "") + ">800x600</option>"
-                                                                                                                 "<option value='" +
-                                      FRAMESIZE_XGA + "'" + (resolution == FRAMESIZE_XGA ? " selected" : "") + ">1024x768</option>"
-                                                                                                               "<option value='" +
-                                      FRAMESIZE_HD + "'" + (resolution == FRAMESIZE_HD ? " selected" : "") + ">1280x720</option>"
-                                                                                                             "<option value='" +
-                                      FRAMESIZE_SXGA + "'" + (resolution == FRAMESIZE_SXGA ? " selected" : "") + ">1280x1024</option>"
-                                                                                                                 "<option value='" +
-                                      FRAMESIZE_UXGA + "'" + (resolution == FRAMESIZE_UXGA ? " selected" : "") + ">1600x1200</option>"
-                                                                                                                 "</select></label><br>"
+    // Заменяем плейсхолдеры на реальные значения
+    html.replace("%LED_R%", led_r);
+    html.replace("%LED_G%", led_g);
+    html.replace("%LED_B%", led_b);
+    html.replace("%BRIGHTNESS%", String(brightness));
+    html.replace("%FLIP_VERTICAL%", flip_vertical ? "checked" : "");
+    html.replace("%VERSION%", VERSION_STRING);
+    
+    // Заменяем значения для resolution
+    const int resolutions[] = {FRAMESIZE_QQVGA, FRAMESIZE_QCIF, FRAMESIZE_HQVGA, FRAMESIZE_QVGA, 
+                             FRAMESIZE_VGA, FRAMESIZE_SVGA, FRAMESIZE_XGA, FRAMESIZE_HD, 
+                             FRAMESIZE_SXGA, FRAMESIZE_UXGA};
+    const String resNames[] = {"QQVGA", "QCIF", "HQVGA", "QVGA", "VGA", "SVGA", "XGA", "HD", "SXGA", "UXGA"};
+    
+    for (int i = 0; i < 10; i++) {
+        html.replace("%" + resNames[i] + "_SELECTED%", resolution == resolutions[i] ? "selected" : "");
+        html.replace("%FRAMESIZE_" + resNames[i] + "%", String(resolutions[i]));
+    }
 
-                                                                                                                 "<label>Quality: <select name='camera_quality'>"
-                                                                                                                 "<option value='5'" +
-                                      (camera_quality == 5 ? " selected" : "") + ">Best (5)</option>"
-                                                                                 "<option value='7'" +
-                                      (camera_quality == 7 ? " selected" : "") + ">Very High (7)</option>"
-                                                                                 "<option value='10'" +
-                                      (camera_quality == 10 ? " selected" : "") + ">High (10)</option>"
-                                                                                  "<option value='12'" +
-                                      (camera_quality == 12 ? " selected" : "") + ">Good (12)</option>"
-                                                                                  "<option value='15'" +
-                                      (camera_quality == 15 ? " selected" : "") + ">Standard (15)</option>"
-                                                                                  "<option value='17'" +
-                                      (camera_quality == 17 ? " selected" : "") + ">Balanced (17)</option>"
-                                                                                  "<option value='20'" +
-                                      (camera_quality == 20 ? " selected" : "") + ">Medium (20)</option>"
-                                                                                  "<option value='25'" +
-                                      (camera_quality == 25 ? " selected" : "") + ">Low (25)</option>"
-                                                                                  "<option value='30'" +
-                                      (camera_quality == 30 ? " selected" : "") + ">Very Low (30)</option>"
-                                                                                  "<option value='40'" +
-                                      (camera_quality == 40 ? " selected" : "") + ">Worst (40)</option>"
-                                                                                  "</select></label><br>"
+    // Заменяем значения для quality
+    const int qualities[] = {5, 7, 10, 12, 15, 17, 20, 25, 30, 40};
+    for (int q : qualities) {
+        html.replace("%QUALITY_" + String(q) + "%", String(q));
+        html.replace("%QUALITY_" + String(q) + "_SELECTED%", camera_quality == q ? "selected" : "");
+    }
 
-                                                                                  "<h2>MQTT</h2><br>"
-                                                                                  "<label>Server: <input name='mqtt_server' value='" +
-                                      mqtt_server + "'></label><br>"
-                                                    "<label>Port: <input name='mqtt_port' value='" +
-                                      mqtt_port + "'></label><br>"
-                                                  "<label>User: <input name='mqtt_user' value='" +
-                                      mqtt_user + "'></label><br>"
-                                                  "<label>Password: <input name='mqtt_password' value='" +
-                                      mqtt_password + "'></label><br>"
+    html.replace("%MQTT_SERVER%", mqtt_server);
+    html.replace("%MQTT_PORT%", String(mqtt_port));
+    html.replace("%MQTT_USER%", mqtt_user);
+    html.replace("%MQTT_PASSWORD%", mqtt_password);
 
-                                                      "<br>"
-                                                      "<input type='submit'></form>");
+    server.send(200, "text/html", html);
 }
 
 void handleSettingsSave()
@@ -395,10 +366,36 @@ void temperatureLoop()
     }
 }
 
+
+int lastResolution = -1;
+int lastQuality = -1;
+const unsigned long cameraStateInterval = 1000; // Проверка каждые 10 секунд
+unsigned long lastCameraStateCheck = 0;
+
+void cameraStateLoop()
+{
+    unsigned long now = millis();
+    if (now - lastCameraStateCheck >= cameraStateInterval)
+    {
+        lastCameraStateCheck = now;
+        preferences.begin("settings", true);
+        int currentResolution = preferences.getInt("resolution", FRAMESIZE_SVGA);
+        int currentQuality = preferences.getInt("camera_quality", 12);
+        preferences.end();
+
+        if (currentResolution != lastResolution || currentQuality != lastQuality)
+        {
+            lastResolution = currentResolution;
+            lastQuality = currentQuality;
+            mqttCameraState(currentResolution, currentQuality);
+        }
+    }
+}
+
+
 unsigned long lastBuiltinLedCheck = 0;
 const unsigned long builtinLedCheckInterval = 1000; // Проверка каждую секунду
 bool lastBuiltinLedState = LOW;
-
 void builtinLedStateLoop()
 {
     unsigned long now = millis();
@@ -419,17 +416,27 @@ void builtinLedStateLoop()
 void setup()
 {
     Serial.begin(115200);
+    delay(1000);  // Даём время на инициализацию Serial
+    Serial.println("Starting...");
 
     pinMode(LED_BUILTIN, OUTPUT);    
     digitalWrite(LED_BUILTIN, LOW);  
 
-
     // Экран
     lcdInit();
+    delay(100);
 
     // Лента
     strip.begin();
     strip.show();
+    delay(100);
+
+    if(!SPIFFS.begin(true)) {
+        Serial.println("An Error has occurred while mounting SPIFFS");
+        delay(1000);
+        ESP.restart();
+        return;
+    }
 
     wifiInit();
 
@@ -443,8 +450,10 @@ void setup()
     else
     {
         lcdPrint("Camera Init");
+        delay(100);
 
         cameraInit();
+        delay(100);
 
         server.on("/stream", HTTP_GET, handleStream);
         server.on("/snapshot", HTTP_GET, handleSnapshot);
@@ -454,7 +463,6 @@ void setup()
 
         server.on("/", HTTP_GET, []()
                   {
-
                 if (server.arg("action") == "stream") {
                     handleStream();
                 }
@@ -469,6 +477,7 @@ void setup()
 
         lcdPrint("MQTT Init");
         Serial.println("MQTT Init");
+        delay(100);
         mqttInit();
     }
 }
@@ -484,6 +493,7 @@ void commonLoop()
     
     temperatureLoop();
     builtinLedStateLoop();
+    cameraStateLoop();
 
     checkWiFiConnection();
 }
