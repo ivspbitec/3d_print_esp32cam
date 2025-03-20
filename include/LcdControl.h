@@ -15,6 +15,7 @@ int isLCD=0;
 #define DispSclPin 13
 #endif
  
+ 
 
 // библиотеки для работы с OLED экраном Arduino IDE
 #include "Wire.h"

@@ -9,6 +9,8 @@
 #define LED_BUILTIN 4   // GPIO 4 — мощный светодиод (Flash LED)
 #endif
 
+#define LCD_ONBOARD 0  // 1 - если есть встроенный LCD, 0 - если нет
+
 struct DisplayData
 {
     String ssid;
@@ -109,25 +111,28 @@ bool wifiConnect(String ssid, String password)
 {
     // Подключение к сохраненной сети Wi-Fi
     isWifiConnect = 0;
+    
+    // Настраиваем WiFi в режим STA с минимальным потреблением
     WiFi.mode(WIFI_STA);
+    WiFi.setSleep(true);  // Включаем режим энергосбережения
+    WiFi.setAutoReconnect(true);  // Автоматическое переподключение
+    
     WiFi.begin(ssid.c_str(), password.c_str());
     Serial.println("Connecting to saved WiFi...");
 
     unsigned long startTime = millis();
 
     while (WiFi.status() != WL_CONNECTED)
-
     {
         delay(2000);
         Serial.println("Connecting...");
         lcdPrint("Connecting...");
         if (millis() - startTime > 20000)
-        { // Попытка подключения не более 10 секунд
+        { // Попытка подключения не более 20 секунд
             Serial.println("Connection timeout. Erasing WiFi credentials.");
             preferences.begin("wifi-config", false);
             preferences.clear(); // Очищаем настройки Wi-Fi
             preferences.end();
-
             break;
         }
     }
@@ -169,6 +174,10 @@ void wifiAP()
 
 void wifiInit()
 {
+    // Отключаем WiFi перед инициализацией
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    delay(100);
 
     // Проверка сохраненных настроек Wi-Fi
     preferences.begin("wifi-config", true);
@@ -419,12 +428,18 @@ void setup()
     delay(1000);  // Даём время на инициализацию Serial
     Serial.println("Starting...");
 
+    // Отключаем неиспользуемые функции для экономии памяти
+    btStop();  // Отключаем Bluetooth
+ 
+
     pinMode(LED_BUILTIN, OUTPUT);    
     digitalWrite(LED_BUILTIN, LOW);  
 
     // Экран
+    #if LCD_ONBOARD
     lcdInit();
     delay(100);
+    #endif
 
     // Лента
     strip.begin();
@@ -451,7 +466,7 @@ void setup()
     {
         lcdPrint("Camera Init");
         delay(100);
-
+ 
         cameraInit();
         delay(100);
 
@@ -486,10 +501,12 @@ void commonLoop()
 {
     server.handleClient();
     mqttLoop();
+    #if LCD_ONBOARD
     if (getLcdState())
     {
         updateDisplay();
     }
+    #endif
     
     temperatureLoop();
     builtinLedStateLoop();

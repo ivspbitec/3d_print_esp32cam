@@ -129,6 +129,9 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
         }
     } else if (topicStr == String(mqtt_user_global+"/camera/set"))
     {
+        bool settingsChanged = false;
+        preferences.begin("settings", false);
+        
         if (doc.containsKey("resolution"))
         {
             Serial.print("mqttCallback() /camera/set ");
@@ -138,11 +141,13 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
             } else {
                 resolution = doc["resolution"].as<int>();
             }
-            preferences.begin("settings", false);
-            preferences.putInt("resolution", resolution);
-            preferences.end();
-            Serial.print("mqttCallback() /camera/set resolution ");
-            Serial.println(resolution);
+            int currentResolution = preferences.getInt("resolution", 0);
+            if (currentResolution != resolution) {
+                preferences.putInt("resolution", resolution);
+                settingsChanged = true;
+                Serial.print("mqttCallback() /camera/set resolution changed to ");
+                Serial.println(resolution);
+            }
         }
         if (doc.containsKey("quality"))
         {
@@ -152,14 +157,18 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
             } else {
                 quality = doc["quality"].as<int>();
             }
-            preferences.begin("settings", false); 
-            preferences.putInt("camera_quality", quality);
-            preferences.end();
-            Serial.print("mqttCallback() /camera/set quality ");
-            Serial.println(quality);
+            int currentQuality = preferences.getInt("camera_quality", 0);
+            if (currentQuality != quality) {
+                preferences.putInt("camera_quality", quality);
+                settingsChanged = true;
+                Serial.print("mqttCallback() /camera/set quality changed to ");
+                Serial.println(quality);
+            }
         }
+        preferences.end();
 
-        if (doc.containsKey("resolution") || doc.containsKey("quality")){
+        if (settingsChanged) {
+            Serial.println("Camera settings changed, restarting...");
             delay(500);
             ESP.restart();
         }
