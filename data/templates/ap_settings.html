@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Настройка WiFi</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f0f0f0; }
+        .container { max-width: 600px; margin: 60px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px #aaa; padding: 30px; }
+        h2 { text-align: center; color: #333; }
+        .wifi-table { width: 100%; border-collapse: separate; border-spacing: 20px 10px; }
+        .wifi-table th, .wifi-table td { text-align: left; vertical-align: top; }
+        label { display: block; margin-bottom: 6px; color: #555; }
+        input[type="text"], input[type="password"] {
+            width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px;
+            font-size: 16px; box-sizing: border-box;
+        }
+        input[type="submit"] {
+            width: 100%; padding: 12px; background: #4CAF50; color: #fff;
+            border: none; border-radius: 5px; font-size: 18px; margin-top: 20px; cursor: pointer;
+            transition: background 0.2s;
+        }
+        input[type="submit"]:hover { background: #388e3c; }
+        .info { margin-top: 20px; color: #888; font-size: 14px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Настройка WiFi</h2>
+        <form method="POST" action="/save">
+            <table class="wifi-table">
+                <tr>
+                    <th>SSID</th>
+                    <th>Пароль</th>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="ssid1">WiFi 1:</label>
+                        <input type="text" id="ssid1" name="ssid1" required>
+                    </td>
+                    <td>
+                        <label for="password1">&nbsp;</label>
+                        <input type="password" id="password1" name="password1" required>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="ssid2">WiFi 2:</label>
+                        <input type="text" id="ssid2" name="ssid2">
+                    </td>
+                    <td>
+                        <label for="password2">&nbsp;</label>
+                        <input type="password" id="password2" name="password2">
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="ssid3">WiFi 3:</label>
+                        <input type="text" id="ssid3" name="ssid3">
+                    </td>
+                    <td>
+                        <label for="password3">&nbsp;</label>
+                        <input type="password" id="password3" name="password3">
+                    </td>
+                </tr>
+            </table>
+            <input type="submit" value="Сохранить">
+        </form>
+        <div class="info">Введите данные до трёх WiFi сетей. Подключение будет выполнено к первой доступной.</div>
+    </div>
+</body>
+</html>

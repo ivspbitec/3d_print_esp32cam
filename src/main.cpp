@@ -61,46 +61,57 @@ void handleSnapshot();
 void handleLEDOn();
 void handleLEDOff();
 
-bool wifiConnect(String ssid, String password);
+bool wifiConnectMulti();
 void wifiAP();
 
 void handleRoot()
 {
-    serverSettings.send(200, "text/html", "<form method='POST' action='/save'><label>SSID: <input name='ssid'></label><br><label>Password: <input name='password'></label><br><input type='submit'></form>");
+    File file = SPIFFS.open("/templates/ap_settings.html", "r");
+    if (!file) {
+        serverSettings.send(500, "text/plain", "Не удалось загрузить форму настроек");
+        return;
+    }
+    String html = file.readString();
+    file.close();
+    serverSettings.send(200, "text/html", html);
 }
 
 void handleSave()
 {
-    String ssid = serverSettings.arg("ssid");
-    String password = serverSettings.arg("password");
-    
-    
-    // Сохранение SSID и пароля в NVS
+    String ssid1 = serverSettings.arg("ssid1");
+    String password1 = serverSettings.arg("password1");
+    String ssid2 = serverSettings.arg("ssid2");
+    String password2 = serverSettings.arg("password2");
+    String ssid3 = serverSettings.arg("ssid3");
+    String password3 = serverSettings.arg("password3");
+
     preferences.begin("wifi-config", false);
-    preferences.putString("ssid", ssid);
-    preferences.putString("password", password);
+    preferences.putString("ssid1", ssid1);
+    preferences.putString("password1", password1);
+    preferences.putString("ssid2", ssid2);
+    preferences.putString("password2", password2);
+    preferences.putString("ssid3", ssid3);
+    preferences.putString("password3", password3);
     preferences.end();
 
-    // Отключение точки доступа перед переключением на STA
     WiFi.softAPdisconnect(true);
 
-    if (wifiConnect(ssid, password))
+    if (wifiConnectMulti())
     {
         String redirectPage = "<html><head>";
         redirectPage += "<meta http-equiv='refresh' content='6;url=http://" + WiFi.localIP().toString() + "/stream'>";
         redirectPage += "</head><body>Saved and connected! The device will now restart.</body></html>";
-
         Serial.println(WiFi.localIP().toString());
         serverSettings.send(200, "text/html", redirectPage);
     }
     else
     {
-        serverSettings.sendHeader("Location", "/", true); // Перенаправление на главную страницу
+        serverSettings.sendHeader("Location", "/", true);
         serverSettings.send(302, "text/plain", "");
         wifiAP();
     }
 
-    delay(1000); // Wait a bit before restarting
+    delay(1000);
     ESP.restart();
 }
 
@@ -110,58 +121,76 @@ void handleNotFound()
     serverSettings.send(302, "text/plain", "");
 }
 
-bool wifiConnect(String ssid, String password)
+bool wifiConnectMulti()
 {
-    // Подключение к сохраненной сети Wi-Fi
     isWifiConnect = 0;
-    
-    // Настраиваем WiFi в режим STA с минимальным потреблением
     WiFi.mode(WIFI_STA);
-    WiFi.setSleep(true);  // Включаем режим энергосбережения
-    WiFi.setAutoReconnect(true);  // Автоматическое переподключение
-    
-    WiFi.begin(ssid.c_str(), password.c_str());
-    Serial.println("Connecting to saved WiFi...");
+    WiFi.setSleep(true);
+    WiFi.setAutoReconnect(true);
 
-    unsigned long startTime = millis();
+    preferences.begin("wifi-config", true);
+    String ssid[3], password[3];
+    ssid[0] = preferences.getString("ssid1", "");
+    password[0] = preferences.getString("password1", "");
+    ssid[1] = preferences.getString("ssid2", "");
+    password[1] = preferences.getString("password2", "");
+    ssid[2] = preferences.getString("ssid3", "");
+    password[2] = preferences.getString("password3", "");
+    int last_wifi_index = preferences.getInt("last_wifi_index", 0);
+    preferences.end();
 
-    while (WiFi.status() != WL_CONNECTED)
-    {        
-        Serial.println("Connecting...");
-        lcdPrint("Connecting...");
-        if (millis() - startTime > 20000)
-        { // Попытка подключения не более 20 секунд
-            Serial.println("Connection timeout. Erasing WiFi credentials.");
-            preferences.begin("wifi-config", false);
-            preferences.clear(); // Очищаем настройки Wi-Fi
-            preferences.end();
-            break;
+    // Перебираем сначала с last_wifi_index, затем остальные по кругу
+    for (int offset = 0; offset < 3; offset++) {
+        int i = (last_wifi_index + offset) % 3;
+        if (ssid[i].length() == 0) continue;
+        WiFi.begin(ssid[i].c_str(), password[i].c_str());
+        Serial.printf("Connecting to WiFi %d: %s\n", i+1, ssid[i].c_str());
+        unsigned long startTime = millis();
+        while (WiFi.status() != WL_CONNECTED)
+        {
+            Serial.println("Connecting...");
+            lcdPrint("Connecting...");
+            if (millis() - startTime > 6000)
+            {
+                Serial.println("Connection timeout.");
+                break;
+            }
+            delay(1000);
         }
-        delay(2000);
+        if (WiFi.status() == WL_CONNECTED)
+        {
+            Serial.println("Connected to WiFi");
+            Serial.print("IP address: ");
+            Serial.println(WiFi.localIP());
+            globalData.ssid = WiFi.SSID();
+            globalData.ip = WiFi.localIP().toString();
+            globalData.rssi = WiFi.RSSI();
+            globalData.isWifiConnected = true;
+            lcdPrint("Wifi Connected: %s", WiFi.localIP().toString());
+            preferences.begin("wifi-config", false);
+            preferences.putBool("ap", false);
+            preferences.putInt("last_wifi_index", i); // Сохраняем индекс успешно подключенной сети
+            preferences.end();
+            isWifiConnect = 1;
+            return true;
+        }
     }
-
-    if (WiFi.status() == WL_CONNECTED)
-    {
-        Serial.println("Connected to saved WiFi");
-        Serial.print("IP address: ");
-        Serial.println(WiFi.localIP());
-
-        globalData.ssid = WiFi.SSID();
-        globalData.ip = WiFi.localIP().toString();
-        globalData.rssi = WiFi.RSSI();
-        globalData.isWifiConnected = true;
-
-        lcdPrint("Wifi Connected: %s", WiFi.localIP().toString());
-
-        isWifiConnect = 1;
-        return true;
-    }
+    // Если не удалось подключиться ни к одной сети, устанавливаем флаг ap
+    preferences.begin("wifi-config", false);
+    preferences.putBool("ap", true);
+    preferences.end();
     return false;
 }
 
+unsigned long WifiAPStartTime = 0; // Время начала работы в режиме AP
+const unsigned long WifiAPTimeout = 5 * 60 * 1000; // Таймаут 5 минут
+
 void wifiAP()
 {
-    // WiFi.softAPdisconnect(true);
+// WiFi.softAPdisconnect(true);
+    // WiFi.disconnect();
+
+// WiFi.softAPdisconnect(true);
     // WiFi.disconnect();
 
     WiFi.mode(WIFI_AP);
@@ -176,22 +205,26 @@ void wifiAP()
 }
 
 void wifiInit()
-{
-    // Отключаем WiFi перед инициализацией
+{ 
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
     delay(100);
 
-    // Проверка сохраненных настроек Wi-Fi
     preferences.begin("wifi-config", true);
-    String ssid = preferences.getString("ssid", "");
-    String password = preferences.getString("password", "");
+    String ssid1 = preferences.getString("ssid1", "");
+    String password1 = preferences.getString("password1", "");
+    String ssid2 = preferences.getString("ssid2", "");
+    String password2 = preferences.getString("password2", "");
+    String ssid3 = preferences.getString("ssid3", "");
+    String password3 = preferences.getString("password3", "");
+    bool apMode = preferences.getBool("ap", false);
     preferences.end();
 
-    if (ssid != "")
+    if (!apMode && (ssid1 != "" || ssid2 != "" || ssid3 != ""))
     {
-        wifiConnect(ssid, password);
+        if (wifiConnectMulti()) return;
     }
+
     if (WiFi.status() != WL_CONNECTED)
     {
         wifiAP();
@@ -215,17 +248,7 @@ void checkWiFiConnection()
             Serial.println("WiFi disconnected, attempting reconnect...");
             lcdPrint("WiFi lost, reconnecting...");
 
-            preferences.begin("wifi-config", true);
-            String ssid = preferences.getString("ssid", "");
-            String password = preferences.getString("password", "");
-            preferences.end();
-
-            if (ssid != "")
-            {
-                wifiConnect(ssid, password);
-            }
-
-            if (WiFi.status() == WL_CONNECTED)
+            if (wifiConnectMulti())
             {
                 Serial.println("WiFi reconnected successfully!");
                 lcdPrint("WiFi reconnected: %s", WiFi.localIP().toString());
@@ -318,12 +341,20 @@ void handleSettings()
     html.replace("%USE_BUILDIN_LED%", useMQTTBuiltinLed ? "checked" : "");
 
     preferences.begin("wifi-config", true);
-    String ssid = preferences.getString("ssid", "");
-    String password = preferences.getString("password", "");
+    String ssid1 = preferences.getString("ssid1", "");
+    String password1 = preferences.getString("password1", "");
+    String ssid2 = preferences.getString("ssid2", "");
+    String password2 = preferences.getString("password2", "");
+    String ssid3 = preferences.getString("ssid3", "");
+    String password3 = preferences.getString("password3", "");
     preferences.end();
-    html.replace("%WIFI_SSID%", ssid);
-    html.replace("%WIFI_PASSWORD%", password);
 
+    html.replace("%WIFI_SSID1%", ssid1);
+    html.replace("%WIFI_PASSWORD1%", password1);
+    html.replace("%WIFI_SSID2%", ssid2);
+    html.replace("%WIFI_PASSWORD2%", password2);
+    html.replace("%WIFI_SSID3%", ssid3);
+    html.replace("%WIFI_PASSWORD3%", password3);
 
     server.send(200, "text/html", html);
 }
@@ -368,18 +399,20 @@ void handleSettingsSave()
     preferences.end();
 
     preferences.begin("wifi-config", false);
-    String ssid = server.arg("ssid");
-    String password = server.arg("password");
+    String ssid1 = server.arg("ssid1");
+    String password1 = server.arg("password1");
+    String ssid2 = server.arg("ssid2");
+    String password2 = server.arg("password2");
+    String ssid3 = server.arg("ssid3");
+    String password3 = server.arg("password3");
     
-    String ssid_old = preferences.getString("ssid", "");
-    String password_old = preferences.getString("password", "");
-    
-    if (ssid != "" && password != ""){        
-        preferences.putString("ssid", ssid);
-        preferences.putString("password", password);      
-    }
+    preferences.putString("ssid1", ssid1);
+    preferences.putString("password1", password1);
+    preferences.putString("ssid2", ssid2);
+    preferences.putString("password2", password2);
+    preferences.putString("ssid3", ssid3);
+    preferences.putString("password3", password3);
     preferences.end();
-
 
     server.sendHeader("Location", "/settings", true);
     server.send(303); // Код состояния 303 See Other
@@ -555,6 +588,26 @@ void commonLoop()
     checkWiFiConnection();
 }
 
+void checkWifiAPLoop()
+{
+    static unsigned long lastCheckTime = 0; // Для проверки каждую секунду
+    unsigned long now = millis();
+
+    if (WifiAPStartTime != 0 && now - lastCheckTime >= 1000) // Проверяем каждую секунду
+    {
+        lastCheckTime = now;
+
+        if (now - WifiAPStartTime > WifiAPTimeout)
+        {
+            Serial.println("AP mode timeout. Resetting AP flag and restarting...");
+            preferences.begin("wifi-config", false);
+            preferences.putBool("ap", false); // Сбрасываем флаг AP
+            preferences.end();
+            ESP.restart(); // Перезагружаем устройство
+        }
+    }
+} 
+
 void loop()
 {
 
@@ -563,6 +616,7 @@ void loop()
     if (isWifiConnect != 1)
     {
         serverSettings.handleClient();
+        checkWifiAPLoop(); // Проверяем таймаут режима AP
     }
     else
     {

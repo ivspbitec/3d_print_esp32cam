@@ -352,11 +352,17 @@
         <div id="wifi" class="tab-content">
             <div class="section">
                 <h2>Настройки WiFi</h2>
-                <label><span>SSID:</span> <input type="text" name='ssid' value='%WIFI_SSID%'></label>
-                <label><span>Пароль:</span> <input type="text" name='password' value='%WIFI_PASSWORD%'></label>
+                <label><span>SSID 1:</span> <input type="text" name='ssid1' value='%WIFI_SSID1%'></label>
+                <label><span>Пароль 1:</span> <input type="text" name='password1' value='%WIFI_PASSWORD1%'></label>
+                <hr>
+                <label><span>SSID 2:</span> <input type="text" name='ssid2' value='%WIFI_SSID2%'></label>
+                <label><span>Пароль 2:</span> <input type="text" name='password2' value='%WIFI_PASSWORD2%'></label>
+                <hr>
+                <label><span>SSID 3:</span> <input type="text" name='ssid3' value='%WIFI_SSID3%'></label>
+                <label><span>Пароль 3:</span> <input type="text" name='password3' value='%WIFI_PASSWORD3%'></label>
                 <div class="mqtt-topics">
                     <h3>Информация:</h3>
-                    <p>После изменения настроек WiFi устройство перезагрузится и попытается подключиться к новой сети.</p>
+                    <p>После изменения настроек WiFi устройство перезагрузится и попытается подключиться к одной из указанных сетей (по порядку).</p>
                     <p>Если подключение не удастся, устройство создаст точку доступа с именем "ESP32_CAM" и паролем "987654321S".</p>
                 </div>
             </div>
@@ -422,4 +428,4 @@
         });
     </script>
 </body>
-</html> 
+</html>
