@@ -48,6 +48,7 @@
         }
         input[type="text"],
         input[type="number"],
+        input[type="password"],
         select {
             flex: 1;
             padding: 12px;
@@ -57,6 +58,15 @@
             background-color: #f9f9f9;
             font-size: 16px;
             height: 45px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        input[type="password"]:focus,
+        select:focus {
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
         }
         input[type="text"] {
             border: 1px solid #e0e0e0;
@@ -108,6 +118,67 @@
             margin: 8px 0;
             line-height: 1.4;
         }
+        hr {
+            border: none;
+            border-top: 1px solid #e0e0e0;
+            margin: 20px 0;
+        }
+        /* Стили для вкладок */
+        .tab-buttons {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+        }
+        .tab-button {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+        .tab-button.active {
+            color: #4a90e2;
+            border-bottom: 2px solid #4a90e2;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .brightness-control {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex: 1;
+        }
+        .brightness-control input {
+            flex: 1;
+        }
+        .brightness-btn {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 40px;
+            height: 45px;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s ease;
+        }
+        .brightness-btn:hover {
+            background-color: #357abd;
+        }
+        .brightness-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
         @media (max-width: 600px) {
             body {
                 padding: 10px;
@@ -140,120 +211,215 @@
             .mqtt-topics h3 {
                 font-size: 16px;
             }
+            .tab-buttons {
+                flex-wrap: wrap;
+            }
+            .tab-button {
+                flex: 1 1 50%;
+                text-align: center;
+            }
         }
     </style>
 </head>
 <body>
     <h1 class="main-title">Настройки ESP32-CAM</h1>
+    
+    <div class="tab-buttons">
+        <button class="tab-button active" onclick="openTab('camera')">Камера</button>
+        <button class="tab-button" onclick="openTab('mqtt')">MQTT</button>
+        <button class="tab-button" onclick="openTab('led')">LED</button>
+        <button class="tab-button" onclick="openTab('wifi')">WiFi</button>
+    </div>
+
     <form method='POST' action='/save'>
-        <div class="section">
-            <h2>Подсветка камеры</h2>
-            <label><span>R:</span> <input type="text" name='led_r' value='%LED_R%'></label>
-            <label><span>G:</span> <input type="text" name='led_g' value='%LED_G%'></label>
-            <label><span>B:</span> <input type="text" name='led_b' value='%LED_B%'></label>
-            <label><span>Яркость (-2;+2):</span> <input type="text" name='brightness' value='%BRIGHTNESS%'></label>
-        </div>
-        
-        <div class="section">
-            <h2>Camera</h2>
-            <label><span>Flip Vertically:</span> <input type='checkbox' name='flip_vertical' %FLIP_VERTICAL%></label>
-            <label><span>Resolution:</span> <select name='resolution'>
-                <option value='%FRAMESIZE_QQVGA%' %QQVGA_SELECTED%>160x120 (%FRAMESIZE_QQVGA%)</option>
-                <option value='%FRAMESIZE_QCIF%' %QCIF_SELECTED%>176x144 (%FRAMESIZE_QCIF%)</option>
-                <option value='%FRAMESIZE_HQVGA%' %HQVGA_SELECTED%>240x176 (%FRAMESIZE_HQVGA%)</option>
-                <option value='%FRAMESIZE_QVGA%' %QVGA_SELECTED%>320x240 (%FRAMESIZE_QVGA%)</option>
-                <option value='%FRAMESIZE_VGA%' %VGA_SELECTED%>640x480 (%FRAMESIZE_VGA%)</option>
-                <option value='%FRAMESIZE_SVGA%' %SVGA_SELECTED%>800x600 (%FRAMESIZE_SVGA%)</option>
-                <option value='%FRAMESIZE_XGA%' %XGA_SELECTED%>1024x768 (%FRAMESIZE_XGA%)</option>
-                <option value='%FRAMESIZE_HD%' %HD_SELECTED%>1280x720 (%FRAMESIZE_HD%)</option>
-                <option value='%FRAMESIZE_SXGA%' %SXGA_SELECTED%>1280x1024 (%FRAMESIZE_SXGA%)</option>
-                <option value='%FRAMESIZE_UXGA%' %UXGA_SELECTED%>1600x1200 (%FRAMESIZE_UXGA%)</option>
-            </select></label>
-
-            <label><span>Quality:</span> <select name='camera_quality'>
-                <option value='%QUALITY_5%' %QUALITY_5_SELECTED%>Best (%QUALITY_5%)</option>
-                <option value='%QUALITY_7%' %QUALITY_7_SELECTED%>Very High (%QUALITY_7%)</option>
-                <option value='%QUALITY_10%' %QUALITY_10_SELECTED%>High (%QUALITY_10%)</option>
-                <option value='%QUALITY_12%' %QUALITY_12_SELECTED%>Good (%QUALITY_12%)</option>
-                <option value='%QUALITY_15%' %QUALITY_15_SELECTED%>Standard (%QUALITY_15%)</option>
-                <option value='%QUALITY_17%' %QUALITY_17_SELECTED%>Balanced (%QUALITY_17%)</option>
-                <option value='%QUALITY_20%' %QUALITY_20_SELECTED%>Medium (%QUALITY_20%)</option>
-                <option value='%QUALITY_25%' %QUALITY_25_SELECTED%>Low (%QUALITY_25%)</option>
-                <option value='%QUALITY_30%' %QUALITY_30_SELECTED%>Very Low (%QUALITY_30%)</option>
-                <option value='%QUALITY_40%' %QUALITY_40_SELECTED%>Worst (%QUALITY_40%)</option>
-            </select></label> 
-        </div>
-
-        <input type='submit' value='Save'>
-
-        <div class="section">
-            <h2>MQTT</h2>
-            <label><span>Server:</span> <input type="text" name='mqtt_server' value='%MQTT_SERVER%'></label>
-            <label><span>Port:</span> <input type="text" name='mqtt_port' value='%MQTT_PORT%'></label>
-            <label><span>User:</span> <input type="text" name='mqtt_user' value='%MQTT_USER%'></label>
-            <label><span>Password:</span> <input type="text" name='mqtt_password' value='%MQTT_PASSWORD%'></label>
-            
-
-
-            <div class="mqtt-topics">
-                <h3>Доступные MQTT топики:</h3>
-                <p><strong>Корневой элемент:</strong> %MQTT_USER%</p>
-                <p><em>Все топики начинаются с корневого элемента, например: %MQTT_USER%/led/set</em></p>
-                <ul>
-                    <li><strong>Подсветка камеры:</strong>
-                        <ul>
-                            <li>Топик: %MQTT_USER%/led/set
-                                <ul>
-                                    <li>Сообщение: "on" - включить подсветку</li>
-                                    <li>Сообщение: "off" - выключить подсветку</li>
-                                    <li>Сообщение: "brightness [значение]" - установить яркость</li>
-                                    <li>Сообщение: "rgb [r,g,b]" - установить цвет</li>
-                                </ul>
-                            </li>
-                            <li>Топик: %MQTT_USER%/led/state<br>Сообщение: {"state": "ON/OFF", "brightness": 0, "color": {"r": 255, "g": 255, "b": 255}}</li>
-                        </ul>
-                    </li>
-                    <li><strong>Встроенный светодиод:</strong>
-                        <ul>
-                            <li>Топик: %MQTT_USER%/led_builtin/set
-                                <ul>
-                                    <li>Сообщение: {"state": "ON"} - включить</li>
-                                    <li>Сообщение: {"state": "OFF"} - выключить</li>
-                                </ul>
-                            </li>
-                            <li>Топик: %MQTT_USER%/led_builtin/state<br>Сообщение: {"state": "ON/OFF"}</li>
-                        </ul>
-                    </li>
-                    <li><strong>Системные команды:</strong>
-                        <ul>
-                            <li>Топик: %MQTT_USER%/cmd<br>Сообщение: "restart" - перезапуск устройства</li>
-                        </ul>
-                    </li>
-                    <li><strong>Управление камерой:</strong>
-                        <ul>
-                            <li>Топик: %MQTT_USER%/camera/set
-                                <ul>
-                                    <li>Сообщение: {"resolution": [значение]} - установить разрешение (5-40)</li>
-                                    <li>Сообщение: {"quality": [значение]} - установить качество (5-40)</li>
-                                </ul>
-                            </li>
-                            <li>Топик: %MQTT_USER%/camera/state<br>Сообщение: {"resolution": 10, "quality": 12}</li>
-                        </ul>
-                    </li>
-                    <li><strong>Датчики:</strong>
-                        <ul>
-                            <li>Топик: %MQTT_USER%/temperature<br>Сообщение: числовое значение температуры</li>
-                        </ul>
-                    </li>
-                </ul>
+        <!-- Вкладка Камера -->
+        <div id="camera" class="tab-content active">
+            <div class="section">
+                <h2>Настройки камеры</h2>
+                <label><span>Flip Vertically:</span> <input type='checkbox' name='flip_vertical' %FLIP_VERTICAL%></label>
+                <label><span>Resolution:</span> <select name='resolution'>
+                    <option value='%FRAMESIZE_QQVGA%' %QQVGA_SELECTED%>160x120 (%FRAMESIZE_QQVGA%)</option>
+                    <option value='%FRAMESIZE_QCIF%' %QCIF_SELECTED%>176x144 (%FRAMESIZE_QCIF%)</option>
+                    <option value='%FRAMESIZE_HQVGA%' %HQVGA_SELECTED%>240x176 (%FRAMESIZE_HQVGA%)</option>
+                    <option value='%FRAMESIZE_QVGA%' %QVGA_SELECTED%>320x240 (%FRAMESIZE_QVGA%)</option>
+                    <option value='%FRAMESIZE_VGA%' %VGA_SELECTED%>640x480 (%FRAMESIZE_VGA%)</option>
+                    <option value='%FRAMESIZE_SVGA%' %SVGA_SELECTED%>800x600 (%FRAMESIZE_SVGA%)</option>
+                    <option value='%FRAMESIZE_XGA%' %XGA_SELECTED%>1024x768 (%FRAMESIZE_XGA%)</option>
+                    <option value='%FRAMESIZE_HD%' %HD_SELECTED%>1280x720 (%FRAMESIZE_HD%)</option>
+                    <option value='%FRAMESIZE_SXGA%' %SXGA_SELECTED%>1280x1024 (%FRAMESIZE_SXGA%)</option>
+                    <option value='%FRAMESIZE_UXGA%' %UXGA_SELECTED%>1600x1200 (%FRAMESIZE_UXGA%)</option>
+                </select></label>
+                <label><span>Quality:</span> <select name='camera_quality'>
+                    <option value='%QUALITY_5%' %QUALITY_5_SELECTED%>Best (%QUALITY_5%)</option>
+                    <option value='%QUALITY_7%' %QUALITY_7_SELECTED%>Very High (%QUALITY_7%)</option>
+                    <option value='%QUALITY_10%' %QUALITY_10_SELECTED%>High (%QUALITY_10%)</option>
+                    <option value='%QUALITY_12%' %QUALITY_12_SELECTED%>Good (%QUALITY_12%)</option>
+                    <option value='%QUALITY_15%' %QUALITY_15_SELECTED%>Standard (%QUALITY_15%)</option>
+                    <option value='%QUALITY_17%' %QUALITY_17_SELECTED%>Balanced (%QUALITY_17%)</option>
+                    <option value='%QUALITY_20%' %QUALITY_20_SELECTED%>Medium (%QUALITY_20%)</option>
+                    <option value='%QUALITY_25%' %QUALITY_25_SELECTED%>Low (%QUALITY_25%)</option>
+                    <option value='%QUALITY_30%' %QUALITY_30_SELECTED%>Very Low (%QUALITY_30%)</option>
+                    <option value='%QUALITY_40%' %QUALITY_40_SELECTED%>Worst (%QUALITY_40%)</option>
+                </select></label>
+                <label><span>Яркость (-2;+2):</span> 
+                    <div class="brightness-control">
+                        <input type="text" name='brightness' id="brightness" value='%BRIGHTNESS%' readonly>
+                        <button type="button" class="brightness-btn" onclick="adjustBrightness(-0.5)">-</button>
+                        <button type="button" class="brightness-btn" onclick="adjustBrightness(0.5)">+</button>
+                    </div>
+                </label>
+                
             </div>
         </div>
 
-      
+        <!-- Вкладка MQTT -->
+        <div id="mqtt" class="tab-content">
+            <div class="section">
+                <h2>Настройки MQTT</h2>
+                <label><span>Server:</span> <input type="text" name='mqtt_server' value='%MQTT_SERVER%'></label>
+                <label><span>Port:</span> <input type="text" name='mqtt_port' value='%MQTT_PORT%'></label>
+                <label><span>User:</span> <input type="text" name='mqtt_user' value='%MQTT_USER%'></label>
+                <label><span>Password:</span> <input type="text" name='mqtt_password' value='%MQTT_PASSWORD%'></label>
+                <hr>
+                <label><span>Разрешить использовать встроенный светодиод:</span> <input type='checkbox' name='use_builtin_led' %USE_BUILDIN_LED%></label>
+                <hr>
+                <div class="mqtt-topics">
+                    <h3>Доступные MQTT топики:</h3>
+                    <p><strong>Корневой элемент:</strong> %MQTT_USER%</p>
+                    <p><em>Все топики начинаются с корневого элемента, например: %MQTT_USER%/led/set</em></p>
+                    <ul>
+                        <li><strong>Подсветка камеры:</strong>
+                            <ul>
+                                <li>Топик: %MQTT_USER%/led/set
+                                    <ul>
+                                        <li>Сообщение: "on" - включить подсветку</li>
+                                        <li>Сообщение: "off" - выключить подсветку</li>
+                                        <li>Сообщение: "brightness [значение]" - установить яркость</li>
+                                        <li>Сообщение: "rgb [r,g,b]" - установить цвет</li>
+                                    </ul>
+                                </li>
+                                <li>Топик: %MQTT_USER%/led/state<br>Сообщение: {"state": "ON/OFF", "brightness": 0, "color": {"r": 255, "g": 255, "b": 255}}</li>
+                            </ul>
+                        </li>
+                        <li><strong>Встроенный светодиод:</strong>
+                            <ul>
+                                <li>Топик: %MQTT_USER%/led_builtin/set
+                                    <ul>
+                                        <li>Сообщение: {"state": "ON"} - включить</li>
+                                        <li>Сообщение: {"state": "OFF"} - выключить</li>
+                                    </ul>
+                                </li>
+                                <li>Топик: %MQTT_USER%/led_builtin/state<br>Сообщение: {"state": "ON/OFF"}</li>
+                            </ul>
+                        </li>
+                        <li><strong>Системные команды:</strong>
+                            <ul>
+                                <li>Топик: %MQTT_USER%/cmd<br>Сообщение: "restart" - перезапуск устройства</li>
+                            </ul>
+                        </li>
+                        <li><strong>Управление камерой:</strong>
+                            <ul>
+                                <li>Топик: %MQTT_USER%/camera/set
+                                    <ul>
+                                        <li>Сообщение: {"resolution": [значение]} - установить разрешение (5-40)</li>
+                                        <li>Сообщение: {"quality": [значение]} - установить качество (5-40)</li>
+                                    </ul>
+                                </li>
+                                <li>Топик: %MQTT_USER%/camera/state<br>Сообщение: {"resolution": 10, "quality": 12}</li>
+                            </ul>
+                        </li>
+                        <li><strong>Датчики:</strong>
+                            <ul>
+                                <li>Топик: %MQTT_USER%/temperature<br>Сообщение: числовое значение температуры</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Вкладка LED -->
+        <div id="led" class="tab-content">
+            <div class="section">
+                <h2>Настройки подсветки</h2>
+                <label><span>R:</span> <input type="text" name='led_r' value='%LED_R%'></label>
+                <label><span>G:</span> <input type="text" name='led_g' value='%LED_G%'></label>
+                <label><span>B:</span> <input type="text" name='led_b' value='%LED_B%'></label>
+            </div>
+        </div>
+
+        <!-- Вкладка WiFi -->
+        <div id="wifi" class="tab-content">
+            <div class="section">
+                <h2>Настройки WiFi</h2>
+                <label><span>SSID:</span> <input type="text" name='ssid' value='%WIFI_SSID%'></label>
+                <label><span>Пароль:</span> <input type="text" name='password' value='%WIFI_PASSWORD%'></label>
+                <div class="mqtt-topics">
+                    <h3>Информация:</h3>
+                    <p>После изменения настроек WiFi устройство перезагрузится и попытается подключиться к новой сети.</p>
+                    <p>Если подключение не удастся, устройство создаст точку доступа с именем "ESP32_CAM" и паролем "987654321S".</p>
+                </div>
+            </div>
+        </div>
+
+        <input type='submit' value='Сохранить'>
+
         <div style="text-align: center; margin-top: 20px; color: #666; font-size: 14px;">
             <p>© 2024 ESP32-CAM Camera Controller</p>
             <p>Version: %VERSION%</p>
         </div>
     </form>
+
+    <script>
+        function openTab(tabName) {
+            // Скрываем все вкладки
+            var tabs = document.getElementsByClassName("tab-content");
+            for (var i = 0; i < tabs.length; i++) {
+                tabs[i].classList.remove("active");
+            }
+            
+            // Убираем активный класс у всех кнопок
+            var buttons = document.getElementsByClassName("tab-button");
+            for (var i = 0; i < buttons.length; i++) {
+                buttons[i].classList.remove("active");
+            }
+            
+            // Показываем выбранную вкладку
+            document.getElementById(tabName).classList.add("active");
+            event.currentTarget.classList.add("active");
+        }
+
+        function adjustBrightness(delta) {
+            const input = document.getElementById('brightness');
+            let currentValue = parseFloat(input.value) || 0;
+            let newValue = currentValue + delta;
+            
+            // Ограничиваем значение в диапазоне от -2 до +2
+            if (newValue > 2) newValue = 2;
+            if (newValue < -2) newValue = -2;
+            
+            // Округляем до одного знака после запятой
+            newValue = Math.round(newValue * 10) / 10;
+            
+            input.value = newValue;
+            
+            // Обновляем состояние кнопок
+            updateBrightnessButtons(newValue);
+        }
+
+        function updateBrightnessButtons(value) {
+            const minusBtn = document.querySelector('.brightness-btn:first-of-type');
+            const plusBtn = document.querySelector('.brightness-btn:last-of-type');
+            
+            minusBtn.disabled = value <= -2;
+            plusBtn.disabled = value >= 2;
+        }
+
+        // Инициализация состояния кнопок при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            const brightnessInput = document.getElementById('brightness');
+            updateBrightnessButtons(parseFloat(brightnessInput.value) || 0);
+        });
+    </script>
 </body>
 </html> 

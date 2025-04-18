@@ -3,11 +3,15 @@
 void mqttStateLed(const String &state, int led_r, int led_g, int led_b, int brightness);
 void mqttTemperature(const String &state);
 
+#include "DeviceConfig.h"
+
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <Preferences.h>
+
 #include <LedControl.h>
 #include <LcdControl.h>
+#include "CameraSetup.h" 
 
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
@@ -56,7 +60,8 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
 
     String topicStr = String(topic);
 
-    if (topicStr == String(mqtt_user_global+"/led/set"))
+   
+    if (LED_ONBOARD && topicStr == String(mqtt_user_global+"/led/set"))
     {
 
         if (doc.containsKey("state"))
@@ -112,19 +117,21 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
         }    
     } else if (topicStr == String(mqtt_user_global+"/led_builtin/set"))
     {
-        if (doc.containsKey("state"))
-        {
-            String state = doc["state"].as<String>();
- 
-            if (state == "ON")
+        if (useMQTTBuiltinLed){
+            if (doc.containsKey("state"))
             {
-                digitalWrite(LED_BUILTIN, HIGH);
-                 Serial.print("mqttCallback() /led_builtin/set on ");
-            }
-            else if (state == "OFF")
-            { 
-                digitalWrite(LED_BUILTIN, LOW);
-                Serial.print("mqttCallback() /led_builtin/set off ");
+                String state = doc["state"].as<String>();
+    
+                if (state == "ON")
+                {
+                    digitalWrite(LED_BUILTIN, HIGH);
+                    Serial.print("mqttCallback() /led_builtin/set on ");
+                }
+                else if (state == "OFF")
+                { 
+                    digitalWrite(LED_BUILTIN, LOW);
+                    Serial.print("mqttCallback() /led_builtin/set off ");
+                }
             }
         }
     } else if (topicStr == String(mqtt_user_global+"/camera/set"))
@@ -168,9 +175,15 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
         preferences.end();
 
         if (settingsChanged) {
-            Serial.println("Camera settings changed, restarting...");
-            delay(500);
-            ESP.restart();
+           // Serial.println("Camera settings changed, restarting...");
+           // delay(500);
+           // ESP.restart();
+            Serial.println("Camera settings changed, reinitializing camera...");
+            lcdPrint("Reinit camera...");
+  
+            esp_camera_deinit();            
+            cameraInit();
+            lcdPrint("Camera done");               
         }
     }
 }
@@ -283,7 +296,7 @@ void mqttInit()
 unsigned long lastReconnectAttempt = 0;
 
 // Интервал между попытками подключения (в миллисекундах)
-const unsigned long reconnectInterval = 1000;  // 2 секунды
+const unsigned long reconnectInterval = 5000;
 
 
 // Функция для обработки MQTT сообщений
@@ -310,16 +323,16 @@ void mqttLoop(){
 
 void mqttStateLed(const String &state, int led_r, int led_g, int led_b, int brightness)
 {
-    if (isMqttDisabled)
-        return;
-    if (!isMqttConnected)
-        return;
-    // Создаем JSON документ
-    JsonDocument doc;
+    #if !LED_ONBOARD
+    return;
+    #endif
 
+    if (isMqttDisabled || !mqttClient.connected())
+        return;
+
+    JsonDocument doc;
     doc["state"] = state;
     doc["brightness"] = brightness;
-    // JsonObject color = doc.createNestedObject("color");
     JsonObject color = doc["color"].to<JsonObject>();
     color["r"] = led_r;
     color["g"] = led_g;
@@ -328,7 +341,6 @@ void mqttStateLed(const String &state, int led_r, int led_g, int led_b, int brig
     char buffer[256];
     serializeJson(doc, buffer);
 
-    // Публикуем сообщение в формате JSON
     mqttClient.publish(String(mqtt_user_global+"/led/state").c_str(), buffer);
 }
 
@@ -336,19 +348,19 @@ void mqttStateLed(const String &state, int led_r, int led_g, int led_b, int brig
 
 void mqttTemperature(const String &state)
 {
-    if (isMqttDisabled)
-        return;
-    if (!isMqttConnected)
+    if (isMqttDisabled || !mqttClient.connected())
         return;
 
     mqttClient.publish(String(mqtt_user_global+"/temperature/state").c_str(), state.c_str());
 }
 
-
-
 void mqttBuiltinLedState(const String &state)
 {
-    if (isMqttDisabled || !mqttClient.connected()) return;
+ 
+
+    if (isMqttDisabled || !mqttClient.connected()) 
+        return;
+
     StaticJsonDocument<64> doc;
     doc["state"] = state;
 
@@ -360,7 +372,9 @@ void mqttBuiltinLedState(const String &state)
 
 void mqttCameraState(int resolution, int quality)
 {
-    if (isMqttDisabled || !mqttClient.connected()) return;
+    if (isMqttDisabled || !mqttClient.connected()) 
+        return;
+
     StaticJsonDocument<128> doc;
     doc["resolution"] = resolution;
     doc["quality"] = quality;

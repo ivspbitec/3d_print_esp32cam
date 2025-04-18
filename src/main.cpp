@@ -1,16 +1,17 @@
+#include <DeviceConfig.h>
 #include <WiFi.h>
 #include <WebServer.h>
 #include <Preferences.h>
 #include "esp_system.h"
 #include <ArduinoJson.h>
-#include "SPIFFS.h"
+#include <SPIFFS.h>
 
 #ifndef LED_BUILTIN
 #define LED_BUILTIN 4   // GPIO 4 — мощный светодиод (Flash LED)
 #endif
 
-#define LCD_ONBOARD 0  // 1 - если есть встроенный LCD, 0 - если нет
 
+ 
 struct DisplayData
 {
     String ssid;
@@ -27,15 +28,16 @@ DisplayData globalData; // Глобальная переменная для хр
 #include "MQTTControl.h"
 #include "CameraSetup.h"
 
-#define LED_PIN 2
-#define LED_COUNT 6
+#if (LED_ONBOARD)
 #include "LedControl.h"
+#endif
 
-
-
+#if (LCD_ONBOARD)
 #define DispSdaPin 15
 #define DispSclPin 13
 #include "LcdControl.h"
+#endif
+
 
 const char *apSSID = "ESP32_CAM";
 const char *apPassword = "987654321S";
@@ -52,6 +54,7 @@ IPAddress apIP(192, 168, 4, 1);
 
 int isWifiConnect = 0;
 // int isScreenCapture=0;
+
 
 void handleStream();
 void handleSnapshot();
@@ -123,8 +126,7 @@ bool wifiConnect(String ssid, String password)
     unsigned long startTime = millis();
 
     while (WiFi.status() != WL_CONNECTED)
-    {
-        delay(2000);
+    {        
         Serial.println("Connecting...");
         lcdPrint("Connecting...");
         if (millis() - startTime > 20000)
@@ -135,6 +137,7 @@ bool wifiConnect(String ssid, String password)
             preferences.end();
             break;
         }
+        delay(2000);
     }
 
     if (WiFi.status() == WL_CONNECTED)
@@ -196,7 +199,7 @@ void wifiInit()
 }
 
 unsigned long lastWifiCheck = 0;
-const unsigned long wifiCheckInterval = 30000; // проверка каждые 30 сек
+const unsigned long wifiCheckInterval = 20000; // проверка каждые  
 
 /** Проверка подключения к wifi в процессе работы*/
 void checkWiFiConnection()
@@ -274,6 +277,7 @@ void handleSettings()
     int mqtt_port = preferences.getInt("mqtt_port", 1883);
     String mqtt_user = preferences.getString("mqtt_user", "");
     String mqtt_password = preferences.getString("mqtt_password", "");
+    useMQTTBuiltinLed = preferences.getBool("use_builtin_led", false);
     preferences.end();
 
     // Читаем шаблон из SPIFFS
@@ -311,6 +315,15 @@ void handleSettings()
     html.replace("%MQTT_PORT%", String(mqtt_port));
     html.replace("%MQTT_USER%", mqtt_user);
     html.replace("%MQTT_PASSWORD%", mqtt_password);
+    html.replace("%USE_BUILDIN_LED%", useMQTTBuiltinLed ? "checked" : "");
+
+    preferences.begin("wifi-config", true);
+    String ssid = preferences.getString("ssid", "");
+    String password = preferences.getString("password", "");
+    preferences.end();
+    html.replace("%WIFI_SSID%", ssid);
+    html.replace("%WIFI_PASSWORD%", password);
+
 
     server.send(200, "text/html", html);
 }
@@ -326,6 +339,7 @@ void handleSettingsSave()
     String mqtt_port = server.arg("mqtt_port");
     String mqtt_user = server.arg("mqtt_user");
     String mqtt_password = server.arg("mqtt_password");
+    bool use_builtin_led = server.arg("use_builtin_led") == "on";
 
     preferences.begin("settings", false);
     preferences.putString("led_r", led_r);
@@ -349,14 +363,28 @@ void handleSettingsSave()
     preferences.putInt("mqtt_port", mqtt_port.toInt());
     preferences.putString("mqtt_user", mqtt_user);
     preferences.putString("mqtt_password", mqtt_password);
+    preferences.putBool("use_builtin_led", use_builtin_led);
 
     preferences.end();
+
+    preferences.begin("wifi-config", false);
+    String ssid = server.arg("ssid");
+    String password = server.arg("password");
+    
+    String ssid_old = preferences.getString("ssid", "");
+    String password_old = preferences.getString("password", "");
+    
+    if (ssid != "" && password != ""){        
+        preferences.putString("ssid", ssid);
+        preferences.putString("password", password);      
+    }
+    preferences.end();
+
 
     server.sendHeader("Location", "/settings", true);
     server.send(303); // Код состояния 303 See Other
 
     delay(500);
-
     ESP.restart();
 }
 
@@ -403,10 +431,11 @@ void cameraStateLoop()
 
 
 unsigned long lastBuiltinLedCheck = 0;
-const unsigned long builtinLedCheckInterval = 1000; // Проверка каждую секунду
+const unsigned long builtinLedCheckInterval = 500; // Проверка каждую секунду
 bool lastBuiltinLedState = LOW;
 void builtinLedStateLoop()
 {
+     
     unsigned long now = millis();
     if (now - lastBuiltinLedCheck >= builtinLedCheckInterval)
     {
@@ -420,7 +449,11 @@ void builtinLedStateLoop()
     }
 }
 
-
+void readSettings() {
+    preferences.begin("settings", true);
+    useMQTTBuiltinLed = preferences.getBool("use_builtin_led", false);
+    preferences.end();
+}
 
 void setup()
 {
@@ -431,6 +464,7 @@ void setup()
     // Отключаем неиспользуемые функции для экономии памяти
     btStop();  // Отключаем Bluetooth
  
+    readSettings(); // Читаем настройки при запуске
 
     pinMode(LED_BUILTIN, OUTPUT);    
     digitalWrite(LED_BUILTIN, LOW);  
@@ -442,9 +476,11 @@ void setup()
     #endif
 
     // Лента
+    #if LED_ONBOARD
     strip.begin();
     strip.show();
     delay(100);
+    #endif
 
     if(!SPIFFS.begin(true)) {
         Serial.println("An Error has occurred while mounting SPIFFS");
@@ -485,8 +521,10 @@ void setup()
                     handleSnapshot();
                 } });
 
+        if (LED_ONBOARD){ 
         server.on("/led_on", handleLEDOn);
         server.on("/led_off", handleLEDOff);
+        }
 
         server.begin();
 
@@ -507,8 +545,10 @@ void commonLoop()
         updateDisplay();
     }
     #endif
-    
+    #if TEMPERATURE_MQTT
     temperatureLoop();
+    #endif
+
     builtinLedStateLoop();
     cameraStateLoop();
 
@@ -541,47 +581,7 @@ void handleLEDOff()
     LedOff();
     server.send(200, "text/html", "LED OFF");
 }
-
-// Функция для настройки сервера вещания с камеры
-void startCameraServer()
-{
-    server.on("/stream", HTTP_GET, []()
-              {
-            //server.on("/stream", HTTP_GET, [](AsyncWebServerRequest *request){
-            WiFiClient client = server.client();
-            camera_fb_t* fb = NULL;
-            Serial.println("Stream Start");
-            if (!client.connected()) {
-                return;
-            }
-            String response = "HTTP/1.1 200 OK\r\nContent-Type: multipart/x-mixed-replace; boundary=frame\r\n\r\n";
-            client.write(response.c_str(), response.length());
-            int iterationCount = 0;
-            while (client.connected()) {
-                fb = esp_camera_fb_get();
-                if (!fb) {
-                    Serial.println("Camera capture failed");
-                    break;
-                }
-
-                response = "--frame\r\n";
-                response += "Content-Type: image/jpeg\r\n\r\n";
-                client.write(response.c_str(), response.length());
-                client.write(fb->buf, fb->len);
-                client.write("\r\n", 2);
-
-                esp_camera_fb_return(fb);
-
-                iterationCount++;
-                if (iterationCount % 10 == 0) {
-                    server.handleClient();
-                    iterationCount = 0;
-                }
-
-            }
-            Serial.println("Stream End"); });
-}
-
+ 
 void handleStream()
 {
     WiFiClient client = server.client();
@@ -613,7 +613,7 @@ void handleStream()
         esp_camera_fb_return(fb);
 
         // Обработка запросов сервера каждые 10 итераций
-        if (counter++ % 3 == 0)
+        if (counter++ % 5 == 0)
         {
             commonLoop();
         }
