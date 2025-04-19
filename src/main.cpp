@@ -53,7 +53,7 @@ const byte DNS_PORT = 53;
 IPAddress apIP(192, 168, 4, 1);
 
 int isWifiConnect = 0;
-// int isScreenCapture=0;
+// int isScreenCapture=0; 
 
 
 void handleStream();
@@ -139,7 +139,7 @@ bool wifiConnectMulti()
     int last_wifi_index = preferences.getInt("last_wifi_index", 0);
     preferences.end();
 
-    // Перебираем сначала с last_wifi_index, затем остальные по кругу
+    // Перебираем сначала   с last_wifi_index, затем остальные по кругу 223
     for (int offset = 0; offset < 3; offset++) {
         int i = (last_wifi_index + offset) % 3;
         if (ssid[i].length() == 0) continue;
