@@ -1,4 +1,3 @@
-
 #pragma once
 
 unsigned long lastUpdate = 0; // Время последнего обновления дисплея
@@ -71,20 +70,28 @@ void updateDisplay() {
     if (currentMillis - lastUpdate >= updateInterval) {
         lastUpdate = currentMillis;
 
-        
-    
+        display.clearDisplay();
+        display.setTextSize(1, 1);
+        display.setTextColor(SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.printf(
+            "W:%s M:%s %s %s OTA:%s T:%.1f",
+            (globalData.isWifiConnected ? "*" : "-"),
+            (globalData.isMqttConnected ? "*" : "-"),
+            globalData.ssid.c_str(),
+            globalData.ip.c_str(),
+            globalData.otaHost.c_str(),
+            globalData.temperature
+        );
+        display.display();
 
-        // Обновляем дисплей
-        //lcdPrint("Wifi Connected. SSID: %s, IP: %s, RSSI: %d dBm, t: %.2f °C\nMQTT Command: %s",
-        lcdPrint("Wifi: %s, MQTT: %s, SSID: %s, IP: %s,  t: %.2f C",
-                 (globalData.isWifiConnected ? "*" : ""),
-                 (globalData.isMqttConnected ? "*" : ""),
-                 globalData.ssid.c_str(),
-                 globalData.ip.c_str(),
-//                 globalData.rssi,
-                 globalData.temperature
-//                 ,
-  //               globalData.mqttCommand.c_str()
-                 );
+        // Если нужно оставить старый lcdPrint, закомментируйте или удалите его:
+        // lcdPrint("Wifi: %s, MQTT: %s, SSID: %s, IP: %s,  t: %.2f C",
+        //          (globalData.isWifiConnected ? "*" : ""),
+        //          (globalData.isMqttConnected ? "*" : ""),
+        //          globalData.ssid.c_str(),
+        //          globalData.ip.c_str(),
+        //          globalData.temperature
+        //          );
     }
 }

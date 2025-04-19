@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head>
+<head> 
     <meta charset="UTF-8">
-    <title>Настройка WiFi</title>
-    <style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>Настройка WiFi для ESP32-CAM</title>
+    <style> 
         body { font-family: Arial, sans-serif; background: #f0f0f0; }
-        .container { max-width: 600px; margin: 60px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px #aaa; padding: 30px; }
-        h2 { text-align: center; color: #333; }
+        .container { max-width: 600px; margin: 20px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px #aaa; padding: 30px; }
         .wifi-table { width: 100%; border-collapse: separate; border-spacing: 20px 10px; }
         .wifi-table th, .wifi-table td { text-align: left; vertical-align: top; }
         label { display: block; margin-bottom: 6px; color: #555; }
@@ -21,51 +22,101 @@
         }
         input[type="submit"]:hover { background: #388e3c; }
         .info { margin-top: 20px; color: #888; font-size: 14px; text-align: center; }
+        .main-title {
+            text-align: center;
+            color: #333;
+            margin: 40px auto 0 auto;
+            font-size: 24px;
+            max-width: 600px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 14px;
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 15px;
+            }
+            .main-title {
+                font-size: 20px;
+                margin-top: 20px;
+            }
+            .wifi-table {
+                border-spacing: 10px 5px;
+            }
+            .wifi-table th, .wifi-table td {
+                display: block;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            .wifi-table tr {
+                display: block;
+                margin-bottom: 10px;
+            }
+            input[type="text"], input[type="password"] {
+                padding: 10px;
+                font-size: 15px;
+            }
+            input[type="submit"] {
+                padding: 12px;
+                font-size: 16px;
+                height: auto;
+            }
+            .footer {
+                font-size: 13px;
+                margin-top: 30px;
+            }
+        }
     </style>
 </head>
 <body>
+    <h1 class="main-title">Настройка WiFi для ESP32-CAM</h1>
     <div class="container">
-        <h2>Настройка WiFi</h2>
         <form method="POST" action="/save">
             <table class="wifi-table">
                 <tr>
-                    <th>SSID</th>
-                    <th>Пароль</th>
-                </tr>
-                <tr>
                     <td>
                         <label for="ssid1">WiFi 1:</label>
-                        <input type="text" id="ssid1" name="ssid1" required>
+                        <input type="text" id="ssid1" name="ssid1" required placeholder="Введите SSID WiFi 1">
                     </td>
                     <td>
                         <label for="password1">&nbsp;</label>
-                        <input type="password" id="password1" name="password1" required>
+                        <input type="password" id="password1" name="password1" required placeholder="Введите пароль WiFi 1">
                     </td>
                 </tr>
                 <tr>
                     <td>
                         <label for="ssid2">WiFi 2:</label>
-                        <input type="text" id="ssid2" name="ssid2">
+                        <input type="text" id="ssid2" name="ssid2" placeholder="Введите SSID WiFi 2">
                     </td>
                     <td>
                         <label for="password2">&nbsp;</label>
-                        <input type="password" id="password2" name="password2">
+                        <input type="password" id="password2" name="password2" placeholder="Введите пароль WiFi 2">
                     </td>
                 </tr>
                 <tr>
                     <td>
                         <label for="ssid3">WiFi 3:</label>
-                        <input type="text" id="ssid3" name="ssid3">
+                        <input type="text" id="ssid3" name="ssid3" placeholder="Введите SSID WiFi 3">
                     </td>
                     <td>
                         <label for="password3">&nbsp;</label>
-                        <input type="password" id="password3" name="password3">
+                        <input type="password" id="password3" name="password3" placeholder="Введите пароль WiFi 3">
                     </td>
                 </tr>
             </table>
             <input type="submit" value="Сохранить">
         </form>
         <div class="info">Введите данные до трёх WiFi сетей. Подключение будет выполнено к первой доступной.</div>
+    </div>
+    <div class="footer">
+        <p>© 2025 ESP32-CAM Camera Controller</p>
+        <p>Version: %VERSION%</p>
     </div>
 </body>
 </html>

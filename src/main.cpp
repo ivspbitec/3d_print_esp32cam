@@ -1,15 +1,32 @@
-#include <DeviceConfig.h>
-#include <WiFi.h>
-#include <WebServer.h>
-#include <Preferences.h>
-#include "esp_system.h"
-#include <ArduinoJson.h>
-#include <SPIFFS.h>
+/*
+  OTA обновление:
+
+  upload_protocol = espota
+  build_flags = -DOTA_HOSTNAME="camera1"
+
+  Заливка по Wi-Fi:
+  pio run -t upload --upload-port camera1.local
+*/
+
+//#include <DeviceConfig.h> // Путь к файлу DeviceConfig.h
+#include <WiFi.h> // Библиотека для работы с WiFi
+#include <WebServer.h> // Веб-сервер
+#include <Preferences.h> // Для работы с Flash
+#include "esp_system.h"  // Для работы с ESP32
+#include <ArduinoJson.h> // Библиотека для работы с JSON
+#include <SPIFFS.h> // Файловая система
+#include <ArduinoOTA.h> //Обновление по WiFi
+
+// Add this block to ensure OTA_HOSTNAME is defined
+#ifndef OTA_HOSTNAME
+#define OTA_HOSTNAME "esp32cam"
+#endif
 
 #ifndef LED_BUILTIN
 #define LED_BUILTIN 4   // GPIO 4 — мощный светодиод (Flash LED)
 #endif
 
+bool useMQTTBuiltinLed = false;
 
  
 struct DisplayData
@@ -21,6 +38,7 @@ struct DisplayData
     String mqttCommand;
     bool isWifiConnected = false;
     bool isMqttConnected = false;
+    String otaHost; // Добавлено поле для OTA host
 };
 
 DisplayData globalData; // Глобальная переменная для хранения данных
@@ -56,6 +74,15 @@ int isWifiConnect = 0;
 // int isScreenCapture=0; 
 
 
+// Определение версии из Git
+#define VERSION_MAJOR 1
+#define VERSION_MINOR 0
+#define VERSION_PATCH 0
+#define VERSION_BUILD __TIME__[6] // Используем секунды из времени компиляции как build number
+
+#define VERSION_STRING String(VERSION_MAJOR) + "." + String(VERSION_MINOR) + "." + String(VERSION_PATCH) + "." + String(VERSION_BUILD)
+
+
 void handleStream();
 void handleSnapshot();
 void handleLEDOn();
@@ -73,6 +100,10 @@ void handleRoot()
     }
     String html = file.readString();
     file.close();
+
+    // Добавьте эту строку для замены %VERSION%
+    html.replace("%VERSION%", VERSION_STRING);
+
     serverSettings.send(200, "text/html", html);
 }
 
@@ -276,14 +307,6 @@ void handleReset()
     preferences.end();
 }
 
-// Определение версии из Git
-#define VERSION_MAJOR 1
-#define VERSION_MINOR 0
-#define VERSION_PATCH 0
-#define VERSION_BUILD __TIME__[6] // Используем секунды из времени компиляции как build number
-
-#define VERSION_STRING String(VERSION_MAJOR) + "." + String(VERSION_MINOR) + "." + String(VERSION_PATCH) + "." + String(VERSION_BUILD)
-
 void handleSettings()
 {
     preferences.begin("settings", true);
@@ -355,6 +378,15 @@ void handleSettings()
     html.replace("%WIFI_PASSWORD2%", password2);
     html.replace("%WIFI_SSID3%", ssid3);
     html.replace("%WIFI_PASSWORD3%", password3);
+
+    // --- LCD info tab placeholders ---
+    html.replace("%LCD_WIFI%", globalData.isWifiConnected ? "Подключено" : "Нет");
+    html.replace("%LCD_MQTT%", globalData.isMqttConnected ? "Подключено" : "Нет");
+    html.replace("%LCD_SSID%", globalData.ssid);
+    html.replace("%LCD_IP%", globalData.ip);
+    html.replace("%LCD_OTA%", globalData.otaHost);
+    html.replace("%LCD_TEMP%", String(globalData.temperature, 1));
+    // ---------------------------------
 
     server.send(200, "text/html", html);
 }
@@ -488,11 +520,13 @@ void readSettings() {
     preferences.end();
 }
 
+
 void setup()
 {
     Serial.begin(115200);
     delay(1000);  // Даём время на инициализацию Serial
     Serial.println("Starting...");
+
 
     // Отключаем неиспользуемые функции для экономии памяти
     btStop();  // Отключаем Bluetooth
@@ -533,6 +567,13 @@ void setup()
     }
     else
     {
+        lcdPrint("OTA Init");        
+        ArduinoOTA.setHostname(OTA_HOSTNAME);
+        ArduinoOTA.begin();
+
+        // Устанавливаем OTA host в globalData
+        globalData.otaHost = OTA_HOSTNAME;
+
         lcdPrint("Camera Init");
         delay(100);
  
@@ -570,6 +611,7 @@ void setup()
 
 void commonLoop()
 {
+    ArduinoOTA.handle();
     server.handleClient();
     mqttLoop();
     #if LCD_ONBOARD

@@ -2,8 +2,9 @@
 
 void mqttStateLed(const String &state, int led_r, int led_g, int led_b, int brightness);
 void mqttTemperature(const String &state);
-
-#include "DeviceConfig.h"
+void mqttBuiltinLedState(const String &state); // <--- Добавлено объявление
+ 
+//#include "DeviceConfig.h"
 
 #include <WiFi.h>
 #include <PubSubClient.h>
@@ -117,23 +118,40 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
         }    
     } else if (topicStr == String(mqtt_user_global+"/led_builtin/set"))
     {
+#if !defined(BUILTIN_LED_FORBID) || (BUILTIN_LED_FORBID == 0)
         if (useMQTTBuiltinLed){
             if (doc.containsKey("state"))
             {
                 String state = doc["state"].as<String>();
     
                 if (state == "ON")
-                {
+                {   
                     digitalWrite(LED_BUILTIN, HIGH);
                     Serial.print("mqttCallback() /led_builtin/set on ");
+                    mqttBuiltinLedState("ON"); // Публикуем новое состояние
                 }
                 else if (state == "OFF")
                 { 
                     digitalWrite(LED_BUILTIN, LOW);
                     Serial.print("mqttCallback() /led_builtin/set off ");
+                    mqttBuiltinLedState("OFF"); // Публикуем новое состояние
                 }
             }
+            // Обработка простого payload без JSON
+            else if (message == "ON") {
+                digitalWrite(LED_BUILTIN, HIGH);
+                Serial.print("mqttCallback() /led_builtin/set on (raw payload) ");
+                mqttBuiltinLedState("ON");
+            }
+            else if (message == "OFF") {
+                digitalWrite(LED_BUILTIN, LOW);
+                Serial.print("mqttCallback() /led_builtin/set off (raw payload) ");
+                mqttBuiltinLedState("OFF");
+            }
         }
+#else
+        Serial.println("BUILTIN LED usage is forbidden by build config.");
+#endif
     } else if (topicStr == String(mqtt_user_global+"/camera/set"))
     {
         bool settingsChanged = false;
@@ -230,7 +248,8 @@ void mqttReconnect()
             mqttClient.subscribe((mqtt_user_global + "/cmd").c_str());
             mqttClient.subscribe((mqtt_user_global + "/camera/set").c_str());
             mqttConnectionTryes=10;
-
+            
+            mqttBuiltinLedState(digitalRead(LED_BUILTIN) == HIGH ? "ON" : "OFF");
             //  LedOff();
         }
         else
