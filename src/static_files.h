@@ -539,7 +539,7 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(
     </form>
 
     <div class="footer">
-        <p>© 2025 ESP32-CAM Camera Controller</p>
+        <p>© 2024-2025 ESP32-CAM Camera Controller</p>
         <p>Version: %VERSION%</p>
     </div>
 

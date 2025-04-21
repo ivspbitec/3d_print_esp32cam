@@ -14,7 +14,6 @@
 #include <Preferences.h> // Для работы с Flash
 #include "esp_system.h"  // Для работы с ESP32
 #include <ArduinoJson.h> // Библиотека для работы с JSON
-#include <SPIFFS.h>      // Файловая система
 #include <ArduinoOTA.h>  //Обновление по WiFi
 
 // Add this block to ensure OTA_HOSTNAME is defined
@@ -27,6 +26,9 @@
 #endif
 
 bool useMQTTBuiltinLed = false;
+
+/** Режим прошивки */
+volatile bool otaRunning = false;
 
 struct DisplayData
 {
@@ -511,6 +513,8 @@ void readSettings()
     preferences.end();
 }
 
+
+
 void setup()
 {
     Serial.begin(115200);
@@ -538,14 +542,7 @@ void setup()
     delay(100);
 #endif
 
-    if (!SPIFFS.begin(true))
-    {
-        Serial.println("An Error has occurred while mounting SPIFFS");
-        delay(1000);
-        ESP.restart();
-        return;
-    }
-
+ 
     wifiInit();
 
     if (isWifiConnect != 1)
@@ -560,6 +557,22 @@ void setup()
         lcdPrint("OTA Init");
         ArduinoOTA.setHostname(OTA_HOSTNAME);
         ArduinoOTA.begin();
+        Serial.println("OTA Ready");
+
+        ArduinoOTA.onStart([]() {
+            otaRunning = true;
+            Serial.println("Start updating...");
+            camera_deinit(); // важно
+        });
+        ArduinoOTA.onError([](ota_error_t error) {
+            Serial.printf("OTA Error[%u]\n", error);
+            otaRunning = false; // Сброс если ошибка
+        });  
+        
+        ArduinoOTA.onEnd([]() {
+            Serial.println("OTA End");
+            ESP.restart(); // Перезагружаем устройство
+          });
 
         // Устанавливаем OTA host в globalData
         globalData.otaHost = OTA_HOSTNAME;
@@ -603,6 +616,7 @@ void setup()
 void commonLoop()
 {
     ArduinoOTA.handle();
+    if (otaRunning) return;
     server.handleClient();
     mqttLoop();
 #if LCD_ONBOARD
@@ -733,3 +747,5 @@ void handleSnapshot()
 
     esp_camera_fb_return(fb);
 }
+
+ 
