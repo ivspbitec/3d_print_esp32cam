@@ -562,7 +562,7 @@ void setup()
         ArduinoOTA.onStart([]() {
             otaRunning = true;
             Serial.println("Start updating...");
-            camera_deinit(); // важно
+            cameraDeinit(); // важно
         });
         ArduinoOTA.onError([](ota_error_t error) {
             Serial.printf("OTA Error[%u]\n", error);

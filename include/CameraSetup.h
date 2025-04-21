@@ -121,3 +121,17 @@ if (s != 0) {
 
     Serial.println("Camera reinitialized successfully");
 }
+
+
+void cameraDeinit()
+{
+    esp_err_t err = esp_camera_deinit();
+    if (err != ESP_OK)
+    {
+        Serial.printf("Camera deinit failed with error 0x%x\n", err);
+    }
+    else
+    {
+        Serial.println("Camera deinitialized successfully");
+    }
+}
