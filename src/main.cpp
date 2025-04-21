@@ -8,14 +8,14 @@
   pio run -t upload --upload-port camera1.local
 */
 
-//#include <DeviceConfig.h> // Путь к файлу DeviceConfig.h
-#include <WiFi.h> // Библиотека для работы с WiFi
-#include <WebServer.h> // Веб-сервер
+// #include <DeviceConfig.h> // Путь к файлу DeviceConfig.h
+#include <WiFi.h>        // Библиотека для работы с WiFi
+#include <WebServer.h>   // Веб-сервер
 #include <Preferences.h> // Для работы с Flash
 #include "esp_system.h"  // Для работы с ESP32
 #include <ArduinoJson.h> // Библиотека для работы с JSON
-#include <SPIFFS.h> // Файловая система
-#include <ArduinoOTA.h> //Обновление по WiFi
+#include <SPIFFS.h>      // Файловая система
+#include <ArduinoOTA.h>  //Обновление по WiFi
 
 // Add this block to ensure OTA_HOSTNAME is defined
 #ifndef OTA_HOSTNAME
@@ -23,12 +23,11 @@
 #endif
 
 #ifndef LED_BUILTIN
-#define LED_BUILTIN 4   // GPIO 4 — мощный светодиод (Flash LED)
+#define LED_BUILTIN 4 // GPIO 4 — мощный светодиод (Flash LED)
 #endif
 
 bool useMQTTBuiltinLed = false;
 
- 
 struct DisplayData
 {
     String ssid;
@@ -56,7 +55,6 @@ DisplayData globalData; // Глобальная переменная для хр
 #include "LcdControl.h"
 #endif
 
-
 const char *apSSID = "ESP32_CAM";
 const char *apPassword = "987654321S";
 
@@ -71,8 +69,7 @@ const byte DNS_PORT = 53;
 IPAddress apIP(192, 168, 4, 1);
 
 int isWifiConnect = 0;
-// int isScreenCapture=0; 
-
+// int isScreenCapture=0;
 
 // Определение версии из Git
 #define VERSION_MAJOR 1
@@ -82,6 +79,7 @@ int isWifiConnect = 0;
 
 #define VERSION_STRING String(VERSION_MAJOR) + "." + String(VERSION_MINOR) + "." + String(VERSION_PATCH) + "." + String(VERSION_BUILD)
 
+#include "static_files.h"
 
 void handleStream();
 void handleSnapshot();
@@ -93,17 +91,10 @@ void wifiAP();
 
 void handleRoot()
 {
-    File file = SPIFFS.open("/templates/ap_settings.html", "r");
-    if (!file) {
-        serverSettings.send(500, "text/plain", "Не удалось загрузить форму настроек");
-        return;
-    }
-    String html = file.readString();
-    file.close();
+    String html(AP_SETTINGS_HTML);
+    html.replace("%VERSION%", VERSION_STRING); 
 
-    // Добавьте эту строку для замены %VERSION%
-    html.replace("%VERSION%", VERSION_STRING);
-
+    // Отправляем клиенту
     serverSettings.send(200, "text/html", html);
 }
 
@@ -171,11 +162,13 @@ bool wifiConnectMulti()
     preferences.end();
 
     // Перебираем сначала   с last_wifi_index, затем остальные по кругу 223
-    for (int offset = 0; offset < 3; offset++) {
+    for (int offset = 0; offset < 3; offset++)
+    {
         int i = (last_wifi_index + offset) % 3;
-        if (ssid[i].length() == 0) continue;
+        if (ssid[i].length() == 0)
+            continue;
         WiFi.begin(ssid[i].c_str(), password[i].c_str());
-        Serial.printf("Connecting to WiFi %d: %s\n", i+1, ssid[i].c_str());
+        Serial.printf("Connecting to WiFi %d: %s\n", i + 1, ssid[i].c_str());
         unsigned long startTime = millis();
         while (WiFi.status() != WL_CONNECTED)
         {
@@ -213,15 +206,15 @@ bool wifiConnectMulti()
     return false;
 }
 
-unsigned long WifiAPStartTime = 0; // Время начала работы в режиме AP
+unsigned long WifiAPStartTime = 0;                 // Время начала работы в режиме AP
 const unsigned long WifiAPTimeout = 5 * 60 * 1000; // Таймаут 5 минут
 
 void wifiAP()
 {
-// WiFi.softAPdisconnect(true);
+    // WiFi.softAPdisconnect(true);
     // WiFi.disconnect();
 
-// WiFi.softAPdisconnect(true);
+    // WiFi.softAPdisconnect(true);
     // WiFi.disconnect();
 
     WiFi.mode(WIFI_AP);
@@ -236,7 +229,7 @@ void wifiAP()
 }
 
 void wifiInit()
-{ 
+{
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
     delay(100);
@@ -253,7 +246,8 @@ void wifiInit()
 
     if (!apMode && (ssid1 != "" || ssid2 != "" || ssid3 != ""))
     {
-        if (wifiConnectMulti()) return;
+        if (wifiConnectMulti())
+            return;
     }
 
     if (WiFi.status() != WL_CONNECTED)
@@ -263,7 +257,7 @@ void wifiInit()
 }
 
 unsigned long lastWifiCheck = 0;
-const unsigned long wifiCheckInterval = 20000; // проверка каждые  
+const unsigned long wifiCheckInterval = 20000; // проверка каждые
 
 /** Проверка подключения к wifi в процессе работы*/
 void checkWiFiConnection()
@@ -290,8 +284,8 @@ void checkWiFiConnection()
                 Serial.println("WiFi reconnection failed!");
                 lcdPrint("WiFi reconnect failed!");
                 globalData.isWifiConnected = false;
-                delay(1000);  
-                ESP.restart();                
+                delay(1000);
+                ESP.restart();
             }
         }
     }
@@ -326,10 +320,7 @@ void handleSettings()
     useMQTTBuiltinLed = preferences.getBool("use_builtin_led", false);
     preferences.end();
 
-    // Читаем шаблон из SPIFFS
-    File file = SPIFFS.open("/templates/settings.html", "r");
-    String html = file.readString();
-    file.close();
+    String html(SETTINGS_HTML);  
 
     // Заменяем плейсхолдеры на реальные значения
     html.replace("%LED_R%", led_r);
@@ -338,21 +329,23 @@ void handleSettings()
     html.replace("%BRIGHTNESS%", String(brightness));
     html.replace("%FLIP_VERTICAL%", flip_vertical ? "checked" : "");
     html.replace("%VERSION%", VERSION_STRING);
-    
+
     // Заменяем значения для resolution
-    const int resolutions[] = {FRAMESIZE_QQVGA, FRAMESIZE_QCIF, FRAMESIZE_HQVGA, FRAMESIZE_QVGA, 
-                             FRAMESIZE_VGA, FRAMESIZE_SVGA, FRAMESIZE_XGA, FRAMESIZE_HD, 
-                             FRAMESIZE_SXGA, FRAMESIZE_UXGA};
+    const int resolutions[] = {FRAMESIZE_QQVGA, FRAMESIZE_QCIF, FRAMESIZE_HQVGA, FRAMESIZE_QVGA,
+                               FRAMESIZE_VGA, FRAMESIZE_SVGA, FRAMESIZE_XGA, FRAMESIZE_HD,
+                               FRAMESIZE_SXGA, FRAMESIZE_UXGA};
     const String resNames[] = {"QQVGA", "QCIF", "HQVGA", "QVGA", "VGA", "SVGA", "XGA", "HD", "SXGA", "UXGA"};
-    
-    for (int i = 0; i < 10; i++) {
+
+    for (int i = 0; i < 10; i++)
+    {
         html.replace("%" + resNames[i] + "_SELECTED%", resolution == resolutions[i] ? "selected" : "");
         html.replace("%FRAMESIZE_" + resNames[i] + "%", String(resolutions[i]));
     }
 
     // Заменяем значения для quality
     const int qualities[] = {5, 7, 10, 12, 15, 17, 20, 25, 30, 40};
-    for (int q : qualities) {
+    for (int q : qualities)
+    {
         html.replace("%QUALITY_" + String(q) + "%", String(q));
         html.replace("%QUALITY_" + String(q) + "_SELECTED%", camera_quality == q ? "selected" : "");
     }
@@ -387,7 +380,7 @@ void handleSettings()
     html.replace("%LCD_OTA%", globalData.otaHost);
     html.replace("%LCD_TEMP%", String(globalData.temperature, 1));
     // ---------------------------------
-
+ 
     server.send(200, "text/html", html);
 }
 
@@ -437,7 +430,7 @@ void handleSettingsSave()
     String password2 = server.arg("password2");
     String ssid3 = server.arg("ssid3");
     String password3 = server.arg("password3");
-    
+
     preferences.putString("ssid1", ssid1);
     preferences.putString("password1", password1);
     preferences.putString("ssid2", ssid2);
@@ -453,7 +446,6 @@ void handleSettingsSave()
     ESP.restart();
 }
 
-
 unsigned long lastTemperatureAttempt = 0;
 const unsigned long temperatureInterval = 10000; // 2 секунды
 void temperatureLoop()
@@ -467,7 +459,6 @@ void temperatureLoop()
         mqttTemperature(String(temperature));
     }
 }
-
 
 int lastResolution = -1;
 int lastQuality = -1;
@@ -494,13 +485,12 @@ void cameraStateLoop()
     }
 }
 
-
 unsigned long lastBuiltinLedCheck = 0;
 const unsigned long builtinLedCheckInterval = 500; // Проверка каждую секунду
 bool lastBuiltinLedState = LOW;
 void builtinLedStateLoop()
 {
-     
+
     unsigned long now = millis();
     if (now - lastBuiltinLedCheck >= builtinLedCheckInterval)
     {
@@ -514,42 +504,42 @@ void builtinLedStateLoop()
     }
 }
 
-void readSettings() {
+void readSettings()
+{
     preferences.begin("settings", true);
     useMQTTBuiltinLed = preferences.getBool("use_builtin_led", false);
     preferences.end();
 }
 
-
 void setup()
 {
     Serial.begin(115200);
-    delay(1000);  // Даём время на инициализацию Serial
+    delay(1000); // Даём время на инициализацию Serial
     Serial.println("Starting...");
 
-
     // Отключаем неиспользуемые функции для экономии памяти
-    btStop();  // Отключаем Bluetooth
- 
+    btStop(); // Отключаем Bluetooth
+
     readSettings(); // Читаем настройки при запуске
 
-    pinMode(LED_BUILTIN, OUTPUT);    
-    digitalWrite(LED_BUILTIN, LOW);  
+    pinMode(LED_BUILTIN, OUTPUT);
+    digitalWrite(LED_BUILTIN, LOW);
 
-    // Экран
-    #if LCD_ONBOARD
+// Экран
+#if LCD_ONBOARD
     lcdInit();
     delay(100);
-    #endif
+#endif
 
-    // Лента
-    #if LED_ONBOARD
+// Лента
+#if LED_ONBOARD
     strip.begin();
     strip.show();
     delay(100);
-    #endif
+#endif
 
-    if(!SPIFFS.begin(true)) {
+    if (!SPIFFS.begin(true))
+    {
         Serial.println("An Error has occurred while mounting SPIFFS");
         delay(1000);
         ESP.restart();
@@ -567,7 +557,7 @@ void setup()
     }
     else
     {
-        lcdPrint("OTA Init");        
+        lcdPrint("OTA Init");
         ArduinoOTA.setHostname(OTA_HOSTNAME);
         ArduinoOTA.begin();
 
@@ -576,7 +566,7 @@ void setup()
 
         lcdPrint("Camera Init");
         delay(100);
- 
+
         cameraInit();
         delay(100);
 
@@ -595,9 +585,10 @@ void setup()
                     handleSnapshot();
                 } });
 
-        if (LED_ONBOARD){ 
-        server.on("/led_on", handleLEDOn);
-        server.on("/led_off", handleLEDOff);
+        if (LED_ONBOARD)
+        {
+            server.on("/led_on", handleLEDOn);
+            server.on("/led_off", handleLEDOff);
         }
 
         server.begin();
@@ -614,15 +605,15 @@ void commonLoop()
     ArduinoOTA.handle();
     server.handleClient();
     mqttLoop();
-    #if LCD_ONBOARD
+#if LCD_ONBOARD
     if (getLcdState())
     {
         updateDisplay();
     }
-    #endif
-    #if TEMPERATURE_MQTT
+#endif
+#if TEMPERATURE_MQTT
     temperatureLoop();
-    #endif
+#endif
 
     builtinLedStateLoop();
     cameraStateLoop();
@@ -648,7 +639,7 @@ void checkWifiAPLoop()
             ESP.restart(); // Перезагружаем устройство
         }
     }
-} 
+}
 
 void loop()
 {
@@ -677,7 +668,7 @@ void handleLEDOff()
     LedOff();
     server.send(200, "text/html", "LED OFF");
 }
- 
+
 void handleStream()
 {
     WiFiClient client = server.client();
@@ -742,5 +733,3 @@ void handleSnapshot()
 
     esp_camera_fb_return(fb);
 }
-
-
