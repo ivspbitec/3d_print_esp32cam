@@ -9,6 +9,9 @@
 */
 
 // #include <DeviceConfig.h> // Путь к файлу DeviceConfig.h
+#include "SerialLogger.h"
+SerialLogger SerialLog; // Объявление переменной SerialLog
+
 #include <WiFi.h>        // Библиотека для работы с WiFi
 #include <WebServer.h>   // Веб-сервер
 #include <Preferences.h> // Для работы с Flash
@@ -87,6 +90,7 @@ void handleStream();
 void handleSnapshot();
 void handleLEDOn();
 void handleLEDOff();
+void handleSerialLog();
 
 bool wifiConnectMulti();
 void wifiAP();
@@ -125,7 +129,7 @@ void handleSave()
         String redirectPage = "<html><head>";
         redirectPage += "<meta http-equiv='refresh' content='6;url=http://" + WiFi.localIP().toString() + "/stream'>";
         redirectPage += "</head><body>Saved and connected! The device will now restart.</body></html>";
-        Serial.println(WiFi.localIP().toString());
+        SerialLog.println(WiFi.localIP().toString());
         serverSettings.send(200, "text/html", redirectPage);
     }
     else
@@ -170,24 +174,24 @@ bool wifiConnectMulti()
         if (ssid[i].length() == 0)
             continue;
         WiFi.begin(ssid[i].c_str(), password[i].c_str());
-        Serial.printf("Connecting to WiFi %d: %s\n", i + 1, ssid[i].c_str());
+        SerialLog.printf("Connecting to WiFi %d: %s\n", i + 1, ssid[i].c_str());
         unsigned long startTime = millis();
         while (WiFi.status() != WL_CONNECTED)
         {
-            Serial.println("Connecting...");
+            SerialLog.println("Connecting...");
             lcdPrint("Connecting...");
             if (millis() - startTime > 6000)
             {
-                Serial.println("Connection timeout.");
+                SerialLog.println("Connection timeout.");
                 break;
             }
             delay(1000);
         }
         if (WiFi.status() == WL_CONNECTED)
         {
-            Serial.println("Connected to WiFi");
-            Serial.print("IP address: ");
-            Serial.println(WiFi.localIP());
+            SerialLog.println("Connected to WiFi");
+            SerialLog.print("IP address: ");
+            SerialLog.println(WiFi.localIP());
             globalData.ssid = WiFi.SSID();
             globalData.ip = WiFi.localIP().toString();
             globalData.rssi = WiFi.RSSI();
@@ -225,8 +229,8 @@ void wifiAP()
     // dnsServer.start(DNS_PORT, "*", apIP);
 
     IPAddress apIP = WiFi.softAPIP();
-    Serial.print("Access Point IP address: ");
-    Serial.println(apIP);
+    SerialLog.print("Access Point IP address: ");
+    SerialLog.println(apIP);
     lcdPrint("Access Point SSID: %s, Password: %s, IP: %s", apSSID, apPassword, apIP.toString().c_str());
 }
 
@@ -254,6 +258,9 @@ void wifiInit()
 
     if (WiFi.status() != WL_CONNECTED)
     {
+        preferences.begin("wifi-config", true);
+        preferences.putBool("ap", false); 
+        preferences.end();
         wifiAP();
     }
 }
@@ -272,18 +279,18 @@ void checkWiFiConnection()
 
         if (WiFi.status() != WL_CONNECTED)
         {
-            Serial.println("WiFi disconnected, attempting reconnect...");
+            SerialLog.println("WiFi disconnected, attempting reconnect...");
             lcdPrint("WiFi lost, reconnecting...");
 
             if (wifiConnectMulti())
             {
-                Serial.println("WiFi reconnected successfully!");
+                SerialLog.println("WiFi reconnected successfully!");
                 lcdPrint("WiFi reconnected: %s", WiFi.localIP().toString());
                 globalData.isWifiConnected = true;
             }
             else
             {
-                Serial.println("WiFi reconnection failed!");
+                SerialLog.println("WiFi reconnection failed!");
                 lcdPrint("WiFi reconnect failed!");
                 globalData.isWifiConnected = false;
                 delay(1000);
@@ -517,9 +524,9 @@ void readSettings()
 
 void setup()
 {
-    Serial.begin(115200);
+    SerialLog.begin(115200);
     delay(1000); // Даём время на инициализацию Serial
-    Serial.println("Starting...");
+    SerialLog.println("Starting...");
 
     // Отключаем неиспользуемые функции для экономии памяти
     btStop(); // Отключаем Bluetooth
@@ -557,20 +564,20 @@ void setup()
         lcdPrint("OTA Init");
         ArduinoOTA.setHostname(OTA_HOSTNAME);
         ArduinoOTA.begin();
-        Serial.println("OTA Ready");
+        SerialLog.println("OTA Ready");
 
         ArduinoOTA.onStart([]() {
             otaRunning = true;
-            Serial.println("Start updating...");
+            SerialLog.println("Start updating...");
             cameraDeinit(); // важно
         });
         ArduinoOTA.onError([](ota_error_t error) {
-            Serial.printf("OTA Error[%u]\n", error);
+            SerialLog.printf("OTA Error[%u]\n", error);
             otaRunning = false; // Сброс если ошибка
         });  
         
         ArduinoOTA.onEnd([]() {
-            Serial.println("OTA End");
+            SerialLog.println("OTA End");
             ESP.restart(); // Перезагружаем устройство
           });
 
@@ -604,10 +611,12 @@ void setup()
             server.on("/led_off", handleLEDOff);
         }
 
+        server.on("/serial-log", HTTP_GET, handleSerialLog);
+
         server.begin();
 
         lcdPrint("MQTT Init");
-        Serial.println("MQTT Init");
+        SerialLog.println("MQTT Init");
         delay(100);
         mqttInit();
     }
@@ -646,7 +655,7 @@ void checkWifiAPLoop()
 
         if (now - WifiAPStartTime > WifiAPTimeout)
         {
-            Serial.println("AP mode timeout. Resetting AP flag and restarting...");
+            SerialLog.println("AP mode timeout. Resetting AP flag and restarting...");
             preferences.begin("wifi-config", false);
             preferences.putBool("ap", false); // Сбрасываем флаг AP
             preferences.end();
@@ -687,7 +696,7 @@ void handleStream()
 {
     WiFiClient client = server.client();
     camera_fb_t *fb = NULL;
-    Serial.println("Stream Start");
+    SerialLog.println("Stream Start");
     if (!client.connected())
     {
         return;
@@ -701,7 +710,7 @@ void handleStream()
         fb = esp_camera_fb_get();
         if (!fb)
         {
-            Serial.println("Camera capture failed");
+            SerialLog.println("Camera capture failed");
             break;
         }
 
@@ -719,7 +728,7 @@ void handleStream()
             commonLoop();
         }
     }
-    Serial.println("Stream End");
+    SerialLog.println("Stream End");
 }
 
 void handleSnapshot()
@@ -727,7 +736,7 @@ void handleSnapshot()
     camera_fb_t *fb = esp_camera_fb_get();
     if (!fb)
     {
-        Serial.println("Camera capture failed");
+        SerialLog.println("Camera capture failed");
         server.send(500, "text/plain", "Camera capture failed");
         return;
     }
@@ -748,4 +757,8 @@ void handleSnapshot()
     esp_camera_fb_return(fb);
 }
 
- 
+void handleSerialLog() {
+    String logContent = SerialLog.getLog(); // Assuming SerialLog has a method to retrieve the log buffer
+    server.send(200, "text/plain", logContent); 
+}
+

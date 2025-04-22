@@ -20,6 +20,7 @@ int isLCD=0;
 #include "Wire.h"
 #include "Adafruit_SSD1306.h"
 #include "MQTTControl.h"
+#include "SerialLogger.h"
 
 Adafruit_SSD1306 display(128, 32, &Wire, -1); // указываем размер экрана в пикселях
 
@@ -54,12 +55,12 @@ void lcdInit(){
     Wire.begin(DispSdaPin,DispSclPin);
 
     if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address SclPin for 128x64
-        Serial.println(F("SSD1306 allocation failed"));
+        SerialLog.println(F("SSD1306 allocation failed"));
         // for(;;); // Don't proceed, loop forever
         return;
     }
     isLCD=1;
-    Serial.println("LCD Init");   
+    SerialLog.println("LCD Init");   
     display.clearDisplay(); 
     lcdPrint("LCD Init");
 }

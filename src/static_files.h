@@ -381,6 +381,7 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(
         <button class="tab-button" onclick="openTab('led')">LED</button>
         <button class="tab-button" onclick="openTab('wifi')">WiFi</button>
         <button class="tab-button" onclick="openTab('lcd')">LCD</button>
+        <button class="tab-button" onclick="openTab('serial-log')">Serial Log</button>
     </div>
 
     <form method='POST' action='/save'>
@@ -535,6 +536,16 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(
             </div>
         </div>
 
+        <!-- Вкладка Serial Log -->
+        <div id="serial-log" class="tab-content">
+            <div class="section">
+                <h2>Serial Log</h2>
+                <div id="serial-log-content" style="background: #f8f9fa; border: 1px solid #ddd; padding: 10px; height: 300px; overflow-y: auto; font-family: monospace; font-size: 14px; white-space: pre-wrap;">
+                    Загрузка...
+                </div>
+            </div>
+        </div>
+
         <input type='submit' value='Сохранить'>
     </form>
 
@@ -593,6 +604,23 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(
             const brightnessInput = document.getElementById('brightness');
             updateBrightnessButtons(parseFloat(brightnessInput.value) || 0);
         });
+
+        function fetchSerialLog() { 
+            const logContent = document.getElementById('serial-log-content');
+            const isScrolledToBottom = logContent.scrollHeight - logContent.scrollTop === logContent.clientHeight;
+
+            fetch('/serial-log')
+                .then(response => response.text())
+                .then(data => {
+                    logContent.textContent = data;
+                    if (isScrolledToBottom) {
+                        logContent.scrollTop = logContent.scrollHeight; // Автопрокрутка вниз, если пользователь не прокручивал
+                    }
+                })
+                .catch(error => console.error('Error fetching serial log:', error));
+        }
+        
+        setInterval(fetchSerialLog, 1000);
     </script>
 </body>
 </html>

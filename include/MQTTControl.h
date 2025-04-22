@@ -1,5 +1,6 @@
 #pragma once
 
+#include "SerialLogger.h"
 void mqttStateLed(const String &state, int led_r, int led_g, int led_b, int brightness);
 void mqttTemperature(const String &state);
 void mqttBuiltinLedState(const String &state); // <--- Добавлено объявление
@@ -29,11 +30,11 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
     if (isMqttDisabled)
         return;
 
-    Serial.println("MQTT Callback received");
-    Serial.print("Topic: ");
-    Serial.println(topic);
-    Serial.print("Length: ");
-    Serial.println(length);
+    SerialLog.println("MQTT Callback received");
+    SerialLog.print("Topic: ");
+    SerialLog.println(topic);
+    SerialLog.print("Length: ");
+    SerialLog.println(length);
 
     // Создаем строку из полученного сообщения
     String message;
@@ -42,10 +43,10 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
         message += (char)payload[i];
     }
 
-    Serial.print("Message arrived [");
-    Serial.print(topic);
-    Serial.print("] ");
-    Serial.println(message);
+    SerialLog.print("Message arrived [");
+    SerialLog.print(topic);
+    SerialLog.print("] ");
+    SerialLog.println(message);
 
     lcdPrint("MQTT: %s", message.c_str());
 
@@ -54,8 +55,8 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
 
     if (error)
     {
-        Serial.print("deserializeJson() failed: ");
-        Serial.println(error.c_str());
+        SerialLog.print("deserializeJson() failed: ");
+        SerialLog.println(error.c_str());
          
     }
 
@@ -74,13 +75,13 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
             if (state == "ON")
             {
                 LedOn(); // Функция для включения ленты
-                Serial.print("mqttCallback() /led/set on ");
+                SerialLog.print("mqttCallback() /led/set on ");
             }
             else if (state == "OFF")
             { 
                 LedOff(); // Функция для выключения ленты
 
-                Serial.print("mqttCallback() /led/set off ");
+                SerialLog.print("mqttCallback() /led/set off ");
             }
         }
         if (doc.containsKey("brightness"))
@@ -90,7 +91,7 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
             preferences.putString("brightness", brightness);
             preferences.end();
 
-            Serial.print("mqttCallback() /led/set brightness ");
+            SerialLog.print("mqttCallback() /led/set brightness ");
             
         }
         if (doc.containsKey("rgb"))
@@ -106,13 +107,13 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
             preferences.putString("led_b", led_b);
             preferences.end();
 
-            Serial.print("mqttCallback() /led/set rgb ");
+            SerialLog.print("mqttCallback() /led/set rgb ");
  
         }
     } else if (topicStr == String(mqtt_user_global+"/cmd"))
     {
         if (message == "restart"){
-            Serial.print("mqttCallback() /cmd/ restart ");
+            SerialLog.print("mqttCallback() /cmd/ restart ");
             lcdPrint("Restarting...");
             ESP.restart();
         }    
@@ -127,25 +128,25 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
                 if (state == "ON")
                 {   
                     digitalWrite(LED_BUILTIN, HIGH);
-                    Serial.print("mqttCallback() /led_builtin/set on ");
+                    SerialLog.print("mqttCallback() /led_builtin/set on ");
                     mqttBuiltinLedState("ON"); // Публикуем новое состояние
                 }
                 else if (state == "OFF")
                 { 
                     digitalWrite(LED_BUILTIN, LOW);
-                    Serial.print("mqttCallback() /led_builtin/set off ");
+                    SerialLog.print("mqttCallback() /led_builtin/set off ");
                     mqttBuiltinLedState("OFF"); // Публикуем новое состояние
                 }
             }
             // Обработка простого payload без JSON
             else if (message == "ON") {
                 digitalWrite(LED_BUILTIN, HIGH);
-                Serial.print("mqttCallback() /led_builtin/set on (raw payload) ");
+                SerialLog.print("mqttCallback() /led_builtin/set on (raw payload) ");
                 mqttBuiltinLedState("ON");
             }
             else if (message == "OFF") {
                 digitalWrite(LED_BUILTIN, LOW);
-                Serial.print("mqttCallback() /led_builtin/set off (raw payload) ");
+                SerialLog.print("mqttCallback() /led_builtin/set off (raw payload) ");
                 mqttBuiltinLedState("OFF");
             }
         }
@@ -159,7 +160,7 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
         
         if (doc.containsKey("resolution"))
         {
-            Serial.print("mqttCallback() /camera/set ");
+            SerialLog.print("mqttCallback() /camera/set ");
             int resolution;
             if (doc["resolution"].is<String>()) {
                 resolution = doc["resolution"].as<String>().toInt();
@@ -170,8 +171,8 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
             if (currentResolution != resolution) {
                 preferences.putInt("resolution", resolution);
                 settingsChanged = true;
-                Serial.print("mqttCallback() /camera/set resolution changed to ");
-                Serial.println(resolution);
+                SerialLog.print("mqttCallback() /camera/set resolution changed to ");
+                SerialLog.println(resolution);
             }
         }
         if (doc.containsKey("quality"))
@@ -186,8 +187,8 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
             if (currentQuality != quality) {
                 preferences.putInt("camera_quality", quality);
                 settingsChanged = true;
-                Serial.print("mqttCallback() /camera/set quality changed to ");
-                Serial.println(quality);
+                SerialLog.print("mqttCallback() /camera/set quality changed to ");
+                SerialLog.println(quality);
             }
         }
         preferences.end();
@@ -226,20 +227,20 @@ void mqttReconnect()
 
     if (mqtt_server == "")
         return;
-    Serial.println("mqttReconnect");
-    Serial.println(mqtt_server);
-    Serial.println(mqtt_port);
-    Serial.println(mqtt_user);
-    Serial.println(mqtt_password);
+    SerialLog.println("mqttReconnect");
+    SerialLog.println(mqtt_server);
+    SerialLog.println(mqtt_port);
+    SerialLog.println(mqtt_user);
+    SerialLog.println(mqtt_password);
 
     if (!mqttClient.connected())
     {
-        Serial.print("Attempting MQTT connection...");
+        SerialLog.print("Attempting MQTT connection...");
 
         /*if (mqttClient.connect("ESP32Client", mqtt_user.c_str(), mqtt_password.c_str()))*/
         if (mqttClient.connect(mqtt_user.c_str(), mqtt_user.c_str(), mqtt_password.c_str()))
         {
-            Serial.println("connected");            
+            SerialLog.println("connected");            
             globalData.isMqttConnected = true;
             isMqttConnected = true;
           
@@ -254,14 +255,14 @@ void mqttReconnect()
         }
         else
         {
-            Serial.print("failed, rc=");
-            Serial.print(mqttClient.state());
-            Serial.println(" try again in 5 seconds");
+            SerialLog.print("failed, rc=");
+            SerialLog.print(mqttClient.state());
+            SerialLog.println(" try again in 5 seconds");
             lcdPrint("MQTT failed");
             globalData.isMqttConnected = false;
 
             mqttTryes = mqttConnectionTryes - 1;
-            Serial.println(mqttConnectionTryes);
+            SerialLog.println(mqttConnectionTryes);
             if (mqttConnectionTryes <= 0)
             {
                 isMqttDisabled = true;            
@@ -274,7 +275,7 @@ void mqttReconnect()
 // Функция инициализации MQTT
 void mqttInit()
 {
-    Serial.println("mqttInit");
+    SerialLog.println("mqttInit");
 
     preferences.begin("settings", false);
     String mqtt_server = preferences.getString("mqtt_server", "");
@@ -284,17 +285,17 @@ void mqttInit()
 
     if (!mqtt_server.isEmpty())
     {
-        Serial.println("mqttClient setserver");
-        Serial.println(mqtt_server.c_str());
-        Serial.println(mqtt_port);
+        SerialLog.println("mqttClient setserver");
+        SerialLog.println(mqtt_server.c_str());
+        SerialLog.println(mqtt_port);
 
         IPAddress mqtt_ip;
         mqtt_ip.fromString(mqtt_server);
-        Serial.println(mqtt_ip);
+        SerialLog.println(mqtt_ip);
 
         if (!mqtt_ip.fromString(mqtt_server))
         {
-            Serial.println("Invalid IP address format");
+            SerialLog.println("Invalid IP address format");
             mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
         }
         else
@@ -329,7 +330,7 @@ void mqttLoop(){
             if (now - lastReconnectAttempt >= reconnectInterval){
                 // Обновляем время последней попытки
                 lastReconnectAttempt = now;
-                Serial.println("mqttLoop -> mqttReconnect()");
+                SerialLog.println("mqttLoop -> mqttReconnect()");
                 
                 mqttReconnect();
             }

@@ -1,7 +1,7 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <Preferences.h>
-
+#include "SerialLogger.h"
 
 const char* apSSID = "ESP32-CAM";
 const char* apPassword = "132465";
@@ -46,12 +46,12 @@ void handleSave() {
     
     while (WiFi.status() != WL_CONNECTED) {
         delay(1000);
-        Serial.println("Connecting...");
+        SerialLog.println("Connecting...");
     }
 
-    Serial.println("Connected to WiFi");
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
+    SerialLog.println("Connected to WiFi");
+    SerialLog.print("IP address: ");
+    SerialLog.println(WiFi.localIP());
 
     server.send(200, "text/html", "Saved! The device will now restart.");
     
@@ -84,14 +84,14 @@ void lcdInit(){
   Wire.begin(DispSdaPin,DispSclPin);
 
   if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address SclPin for 128x64
-    Serial.println(F("SSD1306 allocation failed"));
+    SerialLog.println(F("SSD1306 allocation failed"));
     for(;;); // Don't proceed, loop forever
   }
-   Serial.println("LCD Init"); 
+   SerialLog.println("LCD Init"); 
 }
 
 void setup() {
-    Serial.begin(115200);
+    SerialLog.begin(115200);
     lcdInit();
 
     // Проверка сохраненных настроек Wi-Fi
@@ -104,16 +104,16 @@ void setup() {
         // Подключение к сохраненной сети Wi-Fi
         WiFi.mode(WIFI_STA);
         WiFi.begin(ssid.c_str(), password.c_str());
-        Serial.println("Connecting to saved WiFi...");
+        SerialLog.println("Connecting to saved WiFi...");
         lcdPrint("Connecting to saved WiFi...");
          
         unsigned long startTime = millis();
 
         while (WiFi.status() != WL_CONNECTED) { 
             delay(1000); 
-            Serial.println("Connecting...");
+            SerialLog.println("Connecting...");
             if (millis() - startTime > 4000) { // Попытка подключения не более 10 секунд
-                Serial.println("Connection timeout. Erasing WiFi credentials.");
+                SerialLog.println("Connection timeout. Erasing WiFi credentials.");
                 lcdPrint("Connection timeout. Erasing WiFi credentials.");
                 preferences.begin("wifi-config", false);
                 preferences.clear(); // Очищаем настройки Wi-Fi
@@ -123,10 +123,10 @@ void setup() {
         } 
 
         if (WiFi.status() == WL_CONNECTED) {          
-            Serial.println("Connected to saved WiFi");
-            Serial.print("IP address: ");
+            SerialLog.println("Connected to saved WiFi");
+            SerialLog.print("IP address: ");
             lcdPrint("Wifi Connected. SSID: %s, IP: %s", WiFi.BSSIDstr(), WiFi.localIP().toString().c_str());
-            Serial.println(WiFi.localIP());
+            SerialLog.println(WiFi.localIP());
         }
     } 
     
@@ -135,8 +135,8 @@ void setup() {
         WiFi.mode(WIFI_AP);
         WiFi.softAP(apSSID, apPassword);
         IPAddress apIP = WiFi.softAPIP();
-        Serial.print("Access Point IP address: ");
-        Serial.println(apIP);        
+        SerialLog.print("Access Point IP address: ");
+        SerialLog.println(apIP);        
         lcdPrint("Access Point SSID: %s, Password: %s, IP: %s", apSSID, apPassword, apIP.toString().c_str());
     }
 
@@ -153,4 +153,3 @@ void setup() {
 void loop() {
   //  server.handleClient();
 }
- 
