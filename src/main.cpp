@@ -257,7 +257,8 @@ void wifiInit()
     }
 
     if (WiFi.status() != WL_CONNECTED)
-    {
+    {   
+        //SerialLog.println("Preferences.APmode: "+(apMode?"true":"false"));
         preferences.begin("wifi-config", true);
         preferences.putBool("ap", false); 
         preferences.end();
@@ -592,7 +593,7 @@ void setup()
 
         server.on("/stream", HTTP_GET, handleStream);
         server.on("/snapshot", HTTP_GET, handleSnapshot);
-        server.on("/reset", HTTP_GET, handleReset);
+        //server.on("/reset", HTTP_GET, handleReset);
         server.on("/settings", HTTP_GET, handleSettings);
         server.on("/save", HTTP_POST, handleSettingsSave);
 
