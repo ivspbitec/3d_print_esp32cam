@@ -759,7 +759,7 @@ void handleSnapshot()
 }
 
 void handleSerialLog() {
-    String logContent = SerialLog.getLog(); // Assuming SerialLog has a method to retrieve the log buffer
-    server.send(200, "text/plain", logContent); 
+    String logContent = SerialLog.getNewLogLines(); // Получаем только новые строки
+    server.send(200, "text/plain", logContent); // Отправляем новые строки клиенту
 }
 

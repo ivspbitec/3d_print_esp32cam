@@ -540,9 +540,7 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(
         <div id="serial-log" class="tab-content">
             <div class="section">
                 <h2>Serial Log</h2>
-                <div id="serial-log-content" style="background: #f8f9fa; border: 1px solid #ddd; padding: 10px; height: 300px; overflow-y: auto; font-family: monospace; font-size: 14px; white-space: pre-wrap;">
-                    Загрузка...
-                </div>
+                <div id="serial-log-content" style="background: #f8f9fa; border: 1px solid #ddd; padding: 10px; height: 300px; overflow-y: auto; font-family: monospace; font-size: 14px; white-space: pre-wrap;">Загрузка...</div>
             </div>
         </div>
 
@@ -612,7 +610,7 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(
             fetch('/serial-log')
                 .then(response => response.text())
                 .then(data => {
-                    logContent.textContent = data;
+                    logContent.textContent += data; // Добавляем новые строки к существующим
                     if (isScrolledToBottom) {
                         logContent.scrollTop = logContent.scrollHeight; // Автопрокрутка вниз, если пользователь не прокручивал
                     }
