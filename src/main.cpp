@@ -189,7 +189,7 @@ bool wifiConnectMulti()
         }
         if (WiFi.status() == WL_CONNECTED)
         {
-            SerialLog.println("Connected to WiFi");
+            SerialLog.println("Connected to WiFi!");
             SerialLog.print("IP address: ");
             SerialLog.println(WiFi.localIP());
             globalData.ssid = WiFi.SSID();
@@ -339,7 +339,8 @@ void handleSettings()
     html.replace("%BRIGHTNESS%", String(brightness));
     html.replace("%FLIP_VERTICAL%", flip_vertical ? "checked" : "");
     html.replace("%VERSION%", VERSION_STRING);
-
+    html.replace("%OTA_HOST%", globalData.otaHost);
+    
     // Заменяем значения для resolution
     const int resolutions[] = {FRAMESIZE_QQVGA, FRAMESIZE_QCIF, FRAMESIZE_HQVGA, FRAMESIZE_QVGA,
                                FRAMESIZE_VGA, FRAMESIZE_SVGA, FRAMESIZE_XGA, FRAMESIZE_HD,
