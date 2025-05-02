@@ -98,7 +98,7 @@ void wifiAP();
 void handleRoot()
 {
     String html(AP_SETTINGS_HTML);
-    html.replace("%VERSION%", VERSION_STRING); 
+    html.replace("%VERSION%", VERSION_STRING);
 
     // Отправляем клиенту
     serverSettings.send(200, "text/html", html);
@@ -180,12 +180,12 @@ bool wifiConnectMulti()
         {
             SerialLog.println("Connecting...");
             lcdPrint("Connecting...");
-            if (millis() - startTime > 6000)
+            if (millis() - startTime > 20000) // увеличен таймаут до 20 секунд
             {
                 SerialLog.println("Connection timeout.");
                 break;
             }
-            delay(1000);
+            delay(2000);
         }
         if (WiFi.status() == WL_CONNECTED)
         {
@@ -226,6 +226,8 @@ void wifiAP()
     WiFi.mode(WIFI_AP);
     WiFi.softAP(apSSID, apPassword);
 
+    WifiAPStartTime = millis(); // Запоминаем время начала работы в режиме AP
+    
     // dnsServer.start(DNS_PORT, "*", apIP);
 
     IPAddress apIP = WiFi.softAPIP();
@@ -238,7 +240,7 @@ void wifiInit()
 {
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
-    delay(100);
+    delay(1000);
 
     preferences.begin("wifi-config", true);
     String ssid1 = preferences.getString("ssid1", "");
@@ -257,10 +259,10 @@ void wifiInit()
     }
 
     if (WiFi.status() != WL_CONNECTED)
-    {   
-        //SerialLog.println("Preferences.APmode: "+(apMode?"true":"false"));
+    {
+        // SerialLog.println("Preferences.APmode: "+(apMode?"true":"false"));
         preferences.begin("wifi-config", true);
-        preferences.putBool("ap", false); 
+        preferences.putBool("ap", false);
         preferences.end();
         wifiAP();
     }
@@ -330,7 +332,7 @@ void handleSettings()
     useMQTTBuiltinLed = preferences.getBool("use_builtin_led", false);
     preferences.end();
 
-    String html(SETTINGS_HTML);  
+    String html(SETTINGS_HTML);
 
     // Заменяем плейсхолдеры на реальные значения
     html.replace("%LED_R%", led_r);
@@ -340,7 +342,7 @@ void handleSettings()
     html.replace("%FLIP_VERTICAL%", flip_vertical ? "checked" : "");
     html.replace("%VERSION%", VERSION_STRING);
     html.replace("%OTA_HOST%", globalData.otaHost);
-    
+
     // Заменяем значения для resolution
     const int resolutions[] = {FRAMESIZE_QQVGA, FRAMESIZE_QCIF, FRAMESIZE_HQVGA, FRAMESIZE_QVGA,
                                FRAMESIZE_VGA, FRAMESIZE_SVGA, FRAMESIZE_XGA, FRAMESIZE_HD,
@@ -391,7 +393,7 @@ void handleSettings()
     html.replace("%LCD_OTA%", globalData.otaHost);
     html.replace("%LCD_TEMP%", String(globalData.temperature, 1));
     // ---------------------------------
- 
+
     server.send(200, "text/html", html);
 }
 
@@ -522,8 +524,6 @@ void readSettings()
     preferences.end();
 }
 
-
-
 void setup()
 {
     SerialLog.begin(115200);
@@ -551,7 +551,6 @@ void setup()
     delay(100);
 #endif
 
- 
     wifiInit();
 
     if (isWifiConnect != 1)
@@ -568,20 +567,23 @@ void setup()
         ArduinoOTA.begin();
         SerialLog.println("OTA Ready");
 
-        ArduinoOTA.onStart([]() {
-            otaRunning = true;
-            SerialLog.println("Start updating...");
-            cameraDeinit(); // важно
-        });
-        ArduinoOTA.onError([](ota_error_t error) {
-            SerialLog.printf("OTA Error[%u]\n", error);
-            otaRunning = false; // Сброс если ошибка
-        });  
-        
-        ArduinoOTA.onEnd([]() {
-            SerialLog.println("OTA End");
-            ESP.restart(); // Перезагружаем устройство
-          });
+        ArduinoOTA.onStart([]()
+                           {
+                               otaRunning = true;
+                               SerialLog.println("Start updating...");
+                               cameraDeinit(); // важно
+                           });
+        ArduinoOTA.onError([](ota_error_t error)
+                           {
+                               SerialLog.printf("OTA Error[%u]\n", error);
+                               otaRunning = false; // Сброс если ошибка
+                           });
+
+        ArduinoOTA.onEnd([]()
+                         {
+                             SerialLog.println("OTA End");
+                             ESP.restart(); // Перезагружаем устройство
+                         });
 
         // Устанавливаем OTA host в globalData
         globalData.otaHost = OTA_HOSTNAME;
@@ -594,7 +596,7 @@ void setup()
 
         server.on("/stream", HTTP_GET, handleStream);
         server.on("/snapshot", HTTP_GET, handleSnapshot);
-        //server.on("/reset", HTTP_GET, handleReset);
+        // server.on("/reset", HTTP_GET, handleReset);
         server.on("/settings", HTTP_GET, handleSettings);
         server.on("/save", HTTP_POST, handleSettingsSave);
 
@@ -627,7 +629,8 @@ void setup()
 void commonLoop()
 {
     ArduinoOTA.handle();
-    if (otaRunning) return;
+    if (otaRunning)
+        return;
     server.handleClient();
     mqttLoop();
 #if LCD_ONBOARD
@@ -759,8 +762,8 @@ void handleSnapshot()
     esp_camera_fb_return(fb);
 }
 
-void handleSerialLog() {
+void handleSerialLog()
+{
     String logContent = SerialLog.getNewLogLines(); // Получаем только новые строки
-    server.send(200, "text/plain", logContent); // Отправляем новые строки клиенту
+    server.send(200, "text/plain", logContent);     // Отправляем новые строки клиенту
 }
-
